@@ -1,36 +1,41 @@
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 
 const BASE_URL = 'http://localhost:3000';
 
 const MainPage = () => {
     const [audios, setAudios] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
     useEffect(() => {
-        // Replace with your API endpoint
-        fetch('${BASE_URL}/api/audios')
-            .then(res => res.json())
-            .then(data => {
-                setAudios(data);
+        const fetchAudios = async () => {
+            try {
+                const response = await axios.get(`${BASE_URL}/api/audios`); // Ajusta la ruta según tu backend
+                setAudios(response.data.data);
+            } catch (err) {
+                setError('Error al cargar los audios');
+            } finally {
                 setLoading(false);
-            })
-            .catch(() => setLoading(false));
+            }
+        };
+        fetchAudios();
     }, []);
 
+    if (loading) return <div>Cargando audios...</div>;
+    if (error) return <div>{error}</div>;
+
     return (
-        <div style={{ padding: '2rem' }}>
-            <h1>Audio List</h1>
-            {loading ? (
-                <p>Loading...</p>
-            ) : audios.length === 0 ? (
-                <p>No audios found.</p>
+        <div>
+            <h1>Lista de Audios</h1>
+            {audios.length === 0 ? (
+                <p>No hay audios disponibles.</p>
             ) : (
                 <ul>
                     {audios.map(audio => (
-                        <li key={audio.id} style={{ marginBottom: '1rem' }}>
-                            <strong>{audio.title || `Audio ${audio.id}`}</strong>
-                            <br />
-                            <audio controls src={audio.url} style={{ width: '100%' }} />
+                        <li key={audio.id}>
+                            <strong>{audio.name}</strong>
+                            <audio controls src={audio.url} style={{ marginLeft: '10px' }} />
                         </li>
                     ))}
                 </ul>

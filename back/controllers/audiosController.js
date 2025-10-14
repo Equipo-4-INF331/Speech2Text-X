@@ -1,8 +1,12 @@
+import { db } from '../database.js';
+
 export const showAllAudios = async (req, res) => {
   try {
     const audios = await db`SELECT * FROM audios ORDER BY created_at DESC`;
+    console.log('query result:', audios);
     res.status(200).json({ success: true, data: audios });
   } catch (error) {
+    console.error(error.stack || error);
     res.status(500).json({ error: 'Error al obtener audios' });
   }
 }
@@ -34,9 +38,30 @@ export const newAudio = async (req, res) => {
 export const deleteAudio = async (req, res) => {
   try {
     const { id } = req.params;
-    await db`DELETE FROM audios WHERE id = ${id}`;
-    res.status(200).json({ success: true, message: 'Audio eliminado' });
+    const elem = await db`DELETE FROM audios WHERE id = ${id}`;
+    res.status(200).json({ success: true, message: 'Audio eliminado', data: elem[0] });
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar el audio' });
+  }
+}
+
+export const updateTranscription = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { transcription } = req.body;
+    const updatedAudio = await db`
+      UPDATE audios
+      SET transcription = ${transcription}
+      WHERE id = ${id}
+      RETURNING *
+    `;
+
+    if (updatedAudio.length === 0) {
+      return res.status(404).json({ error: 'Audio no encontrado' });
+    }
+    
+    res.status(200).json({ success: true, data: updatedAudio[0] });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al actualizar la transcripción' });
   }
 }
