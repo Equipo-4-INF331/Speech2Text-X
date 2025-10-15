@@ -1,70 +1,49 @@
-.page-wrapper {
+.historial-page {
   display: flex;
-  flex-direction: column;
-  justify-content: center; /* centra horizontalmente */
-  align-items: center;     /* centra verticalmente */
-  height: 100vh;           /* ocupa toda la altura de la pantalla */
-  width: 100%;
-  box-sizing: border-box;
-  padding: 24px;
-  overflow-y: hidden;
-
+  height: 100vh;
 }
 
-
-.audio-container {
-  display: block;       /* convertir en bloque */
-  margin: 16px auto;    /* margen automático horizontal para centrar */
-  justify-content: center; /* centro horizontal */
-  align-items: center;     /* centro vertical */
-}
-
-
-/* Contenedor de cards */
-/* Contenedor de grid */
-.historial-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 24px;
-  padding: 16px;
-  justify-content: center;
-  align-items: start;
-  background-color: var(--color-modal1-bg);
-  width: 100%;
-  max-width: 1000px;
-  max-height: 80vh;    /* altura máxima del contenedor */
-  overflow-y: auto;    /* scroll si hay muchas cards */
-  box-sizing: border-box;
-  border-radius: 12px;
-}
-
-/* Cards */
-.transcripcion-card {
+/* Sidebar */
+.sidebar {
+  width: 250px;
   background-color: var(--color-card-bg);
   color: var(--color-card-text);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px var(--color-shadow);
   padding: 16px;
+  border: 5px solid #444;
+}
+
+.sidebar h2 {
+  margin-top: 0;
+  font-size: 1.5em;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #444;
+}
+
+.sidebar-list {
+  list-style: none;
+  ;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-item {
+  padding: 8px 12px;
+  border: 1px solid #444;
+  border-radius: 6px;
   cursor: pointer;
-  text-align: center;
-
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-
-  height: 120px;        /* altura fija de previsualización */
-  overflow: hidden;     /* oculta contenido extra */
+  transition: background-color 0.2s;
 }
 
-/* Texto truncado dentro de la card */
-.transcripcion-card div {
-  overflow: hidden;
-  text-overflow: ellipsis;
+.sidebar-item:hover {
+  background-color: var(--bg-hover);
 }
 
-.transcripcion-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 16px var(--color-shadow);
+/* Main content (modal container) */
+.main-content {
+  flex: 1;
+  padding: 24px;
+  background-color: var(--color-bg);
+  overflow-y: auto;
 }
 
 .modal-overlay {
@@ -102,4 +81,22 @@
   font-weight: bold;
   cursor: pointer;
   color: var(--color-card-text);
+}
+
+
+.editable-text {
+  cursor: pointer;
+  transition: background-color 0.2s; /* animar el cambio de background-color */
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.editable-text:hover {
+  background-color: var(--bg-hover); /* usar la variable aquí */
+}
+
+.editable-text::after {
+  content: " (doble click para editar)";
+  font-size: 0.8em;
+  color: gray;
 }

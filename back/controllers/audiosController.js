@@ -15,7 +15,7 @@ export const historial = async(req,res) =>{
   try{
     const{username} = req.body;
     console.log(username);
-    const transcipciones = await db`SELECT * FROM audios WHERE username = ${username}`
+    const transcipciones = await db`SELECT * FROM audios WHERE username = ${username} ORDER BY created_at DESC`
     res.status(200).json({ success: true, data: transcipciones });
 
   } catch (error){
@@ -60,8 +60,7 @@ export const deleteAudio = async (req, res) => {
 
 export const updateTranscription = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { transcription } = req.body;
+    const {id, transcription } = req.body;
     const updatedAudio = await db`
       UPDATE audios
       SET transcription = ${transcription}

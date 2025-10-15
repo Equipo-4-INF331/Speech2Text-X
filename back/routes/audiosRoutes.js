@@ -9,6 +9,6 @@ router.get('/', showAllAudios);
 router.post('/historial',historial)
 router.post('/', newAudio);
 router.delete('/:id', deleteAudio);
-router.put('/:id', updateTranscription);
+router.put('/updateTranscription', updateTranscription);
 
 export default router;

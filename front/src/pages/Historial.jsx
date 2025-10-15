@@ -29,34 +29,37 @@ const Historial = () => {
   }, []);
 
   return (
-    <div className='page-wrapper'>
-        <h2>Historial de Transcripciones</h2>
-      {loading ? (
-        <p>Cargando...</p>
-      ) : error ? (
-        <p>{error}</p>
-      ) : transcripciones.length === 0 ? (
-        <p>No hay transcripciones</p>
-      ) : (
-        <div className="historial-container">
-            
-          {transcripciones.map((t, index) => (
-            <div
-              key={index}
-              className="transcripcion-card"
-              onClick={() => setSelectedTranscripcion(t)}
-            >
-              <h3>{t.name}</h3>
-              <div>{t.transcription}</div>
-            </div>
-          ))}
-        </div>
-      )}
-      <SeleccionHistorial
-        show={selectedTranscripcion !== null}
-        onClose={() => setSelectedTranscripcion(null)}
-        transcripcion={selectedTranscripcion || {}}
-      />
+    <div className='historial-page'>
+      <aside className='sidebar'>
+        <h2 style={{textAlign:'center'}}>Historial</h2>
+        {loading ? (
+          <p>Cargando...</p>
+        ) : error ? (
+          <p>{error}</p>
+        ) : transcripciones.length === 0 ? (
+          <p>No hay transcripciones</p>
+        ) : (
+          <ul className='sidebar-list'>
+            {transcripciones.map((t, index) => (
+              <li
+                key={index}
+                className='sidebar-item'
+                onClick={() => setSelectedTranscripcion(t)}
+              >
+                {t.name}
+              </li>
+            ))}
+          </ul>
+        )}
+      </aside>
+
+      <main className='main-content'>
+        <SeleccionHistorial
+          show={selectedTranscripcion !== null}
+          onClose={() => setSelectedTranscripcion(null)}
+          transcripcion={selectedTranscripcion || {}}
+        />
+      </main>
     </div>
   );
 };
