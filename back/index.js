@@ -24,9 +24,10 @@ async function initDB() {
     await db`
       CREATE TABLE IF NOT EXISTS audios (
         id SERIAL PRIMARY KEY,
+        username VARCHAR(32) NOT NULL,
         name VARCHAR(32) NOT NULL,
         audio VARCHAR(255) NOT NULL,
-        transcription VARCHAR(255),
+        transcription TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;

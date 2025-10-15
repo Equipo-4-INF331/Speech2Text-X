@@ -1,0 +1,105 @@
+.page-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* centra horizontalmente */
+  align-items: center;     /* centra verticalmente */
+  height: 100vh;           /* ocupa toda la altura de la pantalla */
+  width: 100%;
+  box-sizing: border-box;
+  padding: 24px;
+  overflow-y: hidden;
+
+}
+
+
+.audio-container {
+  display: block;       /* convertir en bloque */
+  margin: 16px auto;    /* margen automático horizontal para centrar */
+  justify-content: center; /* centro horizontal */
+  align-items: center;     /* centro vertical */
+}
+
+
+/* Contenedor de cards */
+/* Contenedor de grid */
+.historial-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 24px;
+  padding: 16px;
+  justify-content: center;
+  align-items: start;
+  background-color: var(--color-modal1-bg);
+  width: 100%;
+  max-width: 1000px;
+  max-height: 80vh;    /* altura máxima del contenedor */
+  overflow-y: auto;    /* scroll si hay muchas cards */
+  box-sizing: border-box;
+  border-radius: 12px;
+}
+
+/* Cards */
+.transcripcion-card {
+  background-color: var(--color-card-bg);
+  color: var(--color-card-text);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px var(--color-shadow);
+  padding: 16px;
+  cursor: pointer;
+  text-align: center;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+
+  height: 120px;        /* altura fija de previsualización */
+  overflow: hidden;     /* oculta contenido extra */
+}
+
+/* Texto truncado dentro de la card */
+.transcripcion-card div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.transcripcion-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px var(--color-shadow);
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-overlay);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  position: relative; /* clave para que la X se posicione respecto al modal */
+  background-color: var(--color-modal-bg);
+  color: var(--color-card-text);
+  padding: 24px;
+  border-radius: 12px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 50vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 16px var(--color-shadow);
+  text-align: center; /* centra horizontalmente el contenido */
+}
+
+.modal-close {
+  position: absolute; /* absoluto relativo al modal-content */
+  top: 8px;           /* desde arriba del modal */
+  right: 16px;         /* desde la derecha del modal */
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+  color: var(--color-card-text);
+}

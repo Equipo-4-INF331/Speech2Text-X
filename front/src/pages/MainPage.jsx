@@ -26,7 +26,7 @@ const MainPage = () => {
     if (error) return <div>{error}</div>;
 
     return (
-        <div>
+        <div >
             <h1>Lista de Audios</h1>
             {audios.length === 0 ? (
                 <p>No hay audios disponibles.</p>

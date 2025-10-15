@@ -11,6 +11,18 @@ export const showAllAudios = async (req, res) => {
   }
 }
 
+export const historial = async(req,res) =>{
+  try{
+    const{username} = req.body;
+    console.log(username);
+    const transcipciones = await db`SELECT * FROM audios WHERE username = ${username}`
+    res.status(200).json({ success: true, data: transcipciones });
+
+  } catch (error){
+    res.status(500).json({ error: `Error al obtener el historia: ${error}`});
+  }
+}
+
 export const getAudio = async (req, res) => {
   try {
     const { id } = req.params;
@@ -22,16 +34,17 @@ export const getAudio = async (req, res) => {
 }
 
 export const newAudio = async (req, res) => {
-  const { name, audio, transcription } = req.body;
+  const { username,name ,audio, transcription } = req.body;
   try {
     const elem = await db`
-      INSERT INTO audios (name, audio, transcription)
-      VALUES (${name}, ${audio}, ${transcription})
+      INSERT INTO audios (username,name, audio, transcription)
+      VALUES (${username},${name}, ${audio}, ${transcription})
       RETURNING *
     `;
     res.status(201).json({ success: true, data: elem[0] });
   } catch (error) {
-    res.status(500).json({ error: 'Error al crear el audio' });
+    res.status(500).json({ error: `Error al crear el audio: ${error}` });
+
   }
 }
 

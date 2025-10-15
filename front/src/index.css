@@ -7,6 +7,21 @@
   color: rgba(255, 255, 255, 0.87);
   background-color: #242424;
 
+  --color-text: rgba(255, 255, 255, 0.87);
+  --color-bg: #242424;
+  --color-card-bg: #1a1a1a;
+  --color-card-text: rgba(255,255,255,0.87);
+  --color-accent: #646cff;
+
+  --color-modal-bg: #1e1e1e;       /* fondo del modal */
+  --color-modal1-bg: #292929;       /* fondo del modal */
+  --color-overlay: rgba(0,0,0,0.5); /* overlay oscuro */
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -24,11 +39,11 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  padding: 0;
+
+  display: block; /* 👈 vuelve al comportamiento normal */
 }
+
 
 h1 {
   font-size: 3.2em;
@@ -58,6 +73,15 @@ button:focus-visible {
   :root {
     color: #213547;
     background-color: #ffffff;
+    --color-text: #213547;
+    --color-bg: #ffffff;
+    --color-card-bg: #f9f9f9;
+    --color-card-text: #213547;
+    --color-accent: #747bff;
+
+        /* Modal modo claro */
+    --color-modal-bg: #ffffff;
+    --color-overlay: rgba(0,0,0,0.4);
   }
   a:hover {
     color: #747bff;
