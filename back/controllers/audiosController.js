@@ -168,3 +168,46 @@ export const updateTranscription = async (req, res) => {
     res.status(500).json({ error: 'Error al actualizar la transcripción' });
   }
 }
+
+export const filterAudios = async (req, res) => {
+  try {
+    const { name, description, dateFrom, dateTo, username } = req.query;
+    let query = 'SELECT * FROM audios WHERE 1=1';
+    const params = [];
+
+    if (username) {
+      query += ' AND username = $' + (params.length + 1);
+      params.push(username);
+    }
+
+    if (name) {
+      query += ' AND name ILIKE $' + (params.length + 1);
+      params.push(`%${name}%`);
+    }
+
+    if (description) {
+      query += ' AND transcription ILIKE $' + (params.length + 1);
+      params.push(`%${description}%`);
+    }
+
+    if (dateFrom && dateTo) {
+      query += ' AND DATE(created_at) BETWEEN $' + (params.length + 1) + ' AND $' + (params.length + 2);
+      params.push(dateFrom, dateTo);
+    } else if (dateFrom) {
+      query += ' AND DATE(created_at) >= $' + (params.length + 1);
+      params.push(dateFrom);
+    } else if (dateTo) {
+      query += ' AND DATE(created_at) <= $' + (params.length + 1);
+      params.push(dateTo);
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    const audios = await db.unsafe(query, params);
+    res.set('Cache-Control', 'no-cache');
+    res.status(200).json({ success: true, data: audios });
+  } catch (error) {
+    console.error(error.stack || error);
+    res.status(500).json({ error: 'Error al filtrar audios' });
+  }
+}

@@ -19,6 +19,43 @@
   border-bottom: 1px solid #444;
 }
 
+.filters {
+  margin-bottom: 16px;
+}
+
+.filters input {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 4px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+.filters label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.9em;
+  color: var(--color-text);
+}
+
+.filters button {
+  width: 100%;
+  padding: 6px;
+  margin-bottom: 4px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background-color: var(--color-button);
+  color: var(--color-button-text);
+  cursor: pointer;
+}
+
+.filters button:hover {
+  background-color: var(--bg-hover);
+}
+
 .sidebar-list {
   list-style: none;
   ;
