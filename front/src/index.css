@@ -46,3 +46,6 @@
     --bg-hover: rgba(0,0,0,0.05);
   }
 }
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

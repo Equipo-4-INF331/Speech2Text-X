@@ -8,7 +8,6 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<MainPage />} />
-        <Route path="/historial" element={<Historial />} />
       </Routes>
     </Router>
   );
