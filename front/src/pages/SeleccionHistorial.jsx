@@ -6,16 +6,18 @@ import axios from 'axios';
 const BASE_URL = 'http://localhost:3000';
 
 
-const SeleccionHistorial = ({ show, onClose, transcripcion }) => {
+const SeleccionHistorial = ({ show, onClose, transcripcion, onDelete }) => {
 
   const [isEditing, setIsEditing] = useState(false);
   const [texto, setTexto] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
 
   const handleClose = () => {
     setIsEditing(false);  // salir del modo edición
+    setShowDeleteConfirm(false);
     onClose();            // ejecutar la función que te pasaron como prop
   };
 
@@ -40,6 +42,26 @@ const SeleccionHistorial = ({ show, onClose, transcripcion }) => {
     } finally {
       setLoading(false);
       setIsEditing(false)
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!showDeleteConfirm) {
+      setShowDeleteConfirm(true);
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await axios.delete(`${BASE_URL}/api/audios/${transcripcion.id}`);
+      setShowDeleteConfirm(false);
+      onDelete(); // Llamar callback para refrescar lista
+      handleClose();
+    } catch (err) {
+      console.log(err);
+      setError('Error al eliminar el audio');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -85,6 +107,57 @@ const SeleccionHistorial = ({ show, onClose, transcripcion }) => {
             </>
           )}
           {error && <p style={{ color: 'red' }}>{error}</p>}
+        </div>
+
+        <div style={{ marginTop: '16px', textAlign: 'center' }}>
+          {showDeleteConfirm ? (
+            <>
+              <p style={{ color: 'red', marginBottom: '8px' }}>
+                ¿Estás seguro de que deseas eliminar este audio?
+              </p>
+              <button
+                onClick={handleDelete}
+                disabled={loading}
+                style={{ 
+                  marginRight: '8px',
+                  backgroundColor: '#d32f2f',
+                  color: 'white',
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Sí, eliminar
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                style={{ 
+                  padding: '8px 16px',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancelar
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleDelete}
+              disabled={loading}
+              style={{ 
+                backgroundColor: '#f44336',
+                color: 'white',
+                padding: '8px 16px',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Eliminar audio
+            </button>
+          )}
         </div>
 
       </div>
