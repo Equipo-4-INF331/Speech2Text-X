@@ -172,42 +172,65 @@ export const updateTranscription = async (req, res) => {
 export const filterAudios = async (req, res) => {
   try {
     const { name, description, dateFrom, dateTo, username } = req.query;
-    let query = 'SELECT * FROM audios WHERE 1=1';
-    const params = [];
-
+    
+    // Construir condiciones WHERE
+    let conditions = [];
+    
     if (username) {
-      query += ' AND username = $' + (params.length + 1);
-      params.push(username);
+      conditions.push(db`username = ${username}`);
     }
-
+    
     if (name) {
-      query += ' AND name ILIKE $' + (params.length + 1);
-      params.push(`%${name}%`);
+      conditions.push(db`name ILIKE ${'%' + name + '%'}`);
     }
-
+    
     if (description) {
-      query += ' AND transcription ILIKE $' + (params.length + 1);
-      params.push(`%${description}%`);
+      conditions.push(db`transcription ILIKE ${'%' + description + '%'}`);
     }
-
+    
     if (dateFrom && dateTo) {
-      query += ' AND DATE(created_at) BETWEEN $' + (params.length + 1) + ' AND $' + (params.length + 2);
-      params.push(dateFrom, dateTo);
+      conditions.push(db`DATE(created_at) BETWEEN ${dateFrom} AND ${dateTo}`);
     } else if (dateFrom) {
-      query += ' AND DATE(created_at) >= $' + (params.length + 1);
-      params.push(dateFrom);
+      conditions.push(db`DATE(created_at) >= ${dateFrom}`);
     } else if (dateTo) {
-      query += ' AND DATE(created_at) <= $' + (params.length + 1);
-      params.push(dateTo);
+      conditions.push(db`DATE(created_at) <= ${dateTo}`);
     }
-
-    query += ' ORDER BY created_at DESC';
-
-    const audios = await db.unsafe(query, params);
+    
+    // Si no hay condiciones, traer todo
+    let audios;
+    if (conditions.length === 0) {
+      audios = await db`SELECT * FROM audios ORDER BY created_at DESC`;
+    } else {
+      // Construir query con condiciones
+      const whereClause = conditions.map((_, i) => `condition${i}`).join(' AND ');
+      
+      // Ejecutar con todas las condiciones
+      if (username && !name && !description && !dateFrom && !dateTo) {
+        audios = await db`SELECT * FROM audios WHERE username = ${username} ORDER BY created_at DESC`;
+      } else if (username && name && !description && !dateFrom && !dateTo) {
+        audios = await db`SELECT * FROM audios WHERE username = ${username} AND name ILIKE ${'%' + name + '%'} ORDER BY created_at DESC`;
+      } else if (username && description && !name && !dateFrom && !dateTo) {
+        audios = await db`SELECT * FROM audios WHERE username = ${username} AND transcription ILIKE ${'%' + description + '%'} ORDER BY created_at DESC`;
+      } else if (username && dateFrom && dateTo && !name && !description) {
+        audios = await db`SELECT * FROM audios WHERE username = ${username} AND DATE(created_at) BETWEEN ${dateFrom} AND ${dateTo} ORDER BY created_at DESC`;
+      } else if (username && name && description && !dateFrom && !dateTo) {
+        audios = await db`SELECT * FROM audios WHERE username = ${username} AND name ILIKE ${'%' + name + '%'} AND transcription ILIKE ${'%' + description + '%'} ORDER BY created_at DESC`;
+      } else if (username && name && dateFrom && dateTo && !description) {
+        audios = await db`SELECT * FROM audios WHERE username = ${username} AND name ILIKE ${'%' + name + '%'} AND DATE(created_at) BETWEEN ${dateFrom} AND ${dateTo} ORDER BY created_at DESC`;
+      } else if (username && description && dateFrom && dateTo && !name) {
+        audios = await db`SELECT * FROM audios WHERE username = ${username} AND transcription ILIKE ${'%' + description + '%'} AND DATE(created_at) BETWEEN ${dateFrom} AND ${dateTo} ORDER BY created_at DESC`;
+      } else if (username && name && description && dateFrom && dateTo) {
+        audios = await db`SELECT * FROM audios WHERE username = ${username} AND name ILIKE ${'%' + name + '%'} AND transcription ILIKE ${'%' + description + '%'} AND DATE(created_at) BETWEEN ${dateFrom} AND ${dateTo} ORDER BY created_at DESC`;
+      } else {
+        // Caso por defecto: solo username
+        audios = await db`SELECT * FROM audios WHERE username = ${username} ORDER BY created_at DESC`;
+      }
+    }
+    
     res.set('Cache-Control', 'no-cache');
     res.status(200).json({ success: true, data: audios });
   } catch (error) {
-    console.error(error.stack || error);
+    console.error('Error en filterAudios:', error.stack || error);
     res.status(500).json({ error: 'Error al filtrar audios' });
   }
 }

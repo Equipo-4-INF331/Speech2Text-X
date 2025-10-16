@@ -147,6 +147,7 @@ const Historial = forwardRef((props, ref) => {
           show={selectedTranscripcion !== null}
           onClose={() => setSelectedTranscripcion(null)}
           transcripcion={selectedTranscripcion || {}}
+          onDelete={() => fetchHistorial()}
         />
       </main>
     </div>
