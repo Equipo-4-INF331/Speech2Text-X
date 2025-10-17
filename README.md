@@ -25,8 +25,8 @@ no se pueden grabar audios en la aplicacion se deben subir directamente
 # Instrucciones de instalacion
 1. Dirigirse a la carpeta de inicio y crear el archivo .env con las credenciales usando la plantilla .env.example
 1. Dirigirse a las carpetas back y front
-1. Ejecutar en ambas carpetas el comando _npm install_
-1. Ejecutar en ambas carpetas el comando _npm run dev _
+1. Ejecutar en ambas carpetas el comando ``` npm install ```
+1. Ejecutar en ambas carpetas el comando  ``` npm run dev ```
 1. Con esto podra utilizar la aplicacion en los puertos que se muestran en la consola
 
 # Esto contempla el uso de poder subir audios, estos se transcriben y poder ver su historial
@@ -51,3 +51,20 @@ en siguiente enlace corresponde a la wiki, donde se encuentra la documentación 
 
 # Videos
 
+***
+
+## Contribuciones
+
+
+1. **Fork** este repositorio.  
+2. **Clona** tu fork en tu máquina local:  
+   ```bash
+   git clone https://github.com/Grupo7-INF331/Tarea-1.git
+---
+
+3. Crea una branch y subela al github
+   
+## Licencia
+
+
+Este proyecto está bajo la licencia [MIT](LICENSE) (o la que corresponda).
