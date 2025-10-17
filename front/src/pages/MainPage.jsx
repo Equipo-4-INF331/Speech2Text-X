@@ -1,8 +1,9 @@
 import React, { useRef, useState } from 'react';
 import axios from 'axios';
 import Historial from './Historial.jsx';
+import config from '../config';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const BASE_URL = config.API_URL;
 
 const MainPage = () => {
   const audioRef = useRef();

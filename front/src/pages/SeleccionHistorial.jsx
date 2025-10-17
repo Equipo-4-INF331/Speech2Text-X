@@ -2,9 +2,9 @@ import React from 'react';
 import './Historial.css';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import config from '../config';
 
-const BASE_URL = 'http://localhost:3000';
-
+const BASE_URL = config.API_URL;
 
 const SeleccionHistorial = ({ show, onClose, transcripcion, onDelete }) => {
 
