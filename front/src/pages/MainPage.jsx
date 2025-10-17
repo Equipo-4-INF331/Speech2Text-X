@@ -27,7 +27,7 @@ const MainPage = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('username', 'alberto'); // mismo usuario que historial
-      formData.append('nombre', nombre || file.name);
+      formData.append('nombre', name || file.name);
 
       await axios.post(`${BASE_URL}/api/audios`, formData);
 
