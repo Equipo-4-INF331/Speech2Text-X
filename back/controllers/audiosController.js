@@ -16,7 +16,7 @@ if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   };
 }
-const s3 = new S3Client(s3Config);
+export const s3 = new S3Client(s3Config);
 
 export { upload };
 
@@ -28,7 +28,7 @@ export const historial = async(req,res) =>{
     console.log('query result:', transcripciones);
 
   } catch (error){
-    res.status(500).json({ error: `Error al obtener el historia: ${error}`});
+    res.status(500).json({ error: `Error al obtener el historial: ${error}`});
   }
 }
 
@@ -43,13 +43,15 @@ export const getAudio = async (req, res) => {
 }
 
 export const newAudio = async (req, res) => {
+  let tmpPath; // se agrega despues de los tests
   try {
     const file = req.file;
-    const { name: bodyName, transcription } = req.body;
+    const bodyName  = req.body.name;
     const username = req.body.username || "anonymous";
+    var transcription = '';
 
     if (!file && !bodyName) {
-      return res.status(400).json({ error: "Falta archivo o nombre" });
+      return res.status(400).json({ error: "Falta archivo y nombre" });
     }
 
     const name = bodyName || file.originalname;
@@ -75,10 +77,11 @@ export const newAudio = async (req, res) => {
       if (process.env.AWS_S3_PUBLIC === "true") {
         putParams.ACL = "public-read";
       }
-
+      console.log("estoy aqui \n\n\n")
       try {
         await s3.send(new PutObjectCommand(putParams));
       } catch (s3err) {
+        console.log("estoy aqui \n\n\n")
         console.error("❌ Error subiendo a S3:", s3err);
         return res.status(500).json({ error: "Error al subir a S3", details: s3err.message });
       }
@@ -226,7 +229,6 @@ export const filterAudios = async (req, res) => {
         audios = await db`SELECT * FROM audios WHERE username = ${username} ORDER BY created_at DESC`;
       }
     }
-    
     res.set('Cache-Control', 'no-cache');
     res.status(200).json({ success: true, data: audios });
   } catch (error) {

@@ -9,6 +9,8 @@
   background-color: var(--color-card-bg);
   color: var(--color-card-text);
   padding: 16px;
+  height: auto;
+  overflow-y: auto;
   border: 5px solid #444;
 }
 
