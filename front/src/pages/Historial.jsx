@@ -1,4 +1,4 @@
-import React, { useEffect, useState, forwardRef, useImperativeHandle } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import './Historial.css';
 import SeleccionHistorial from './SeleccionHistorial';
@@ -7,8 +7,7 @@ import config from '../config';
 const BASE_URL = config.API_URL;
 const USERNAME = 'alberto';
 
-// Usamos forwardRef para exponer funciones al padre
-const Historial = forwardRef((props, ref) => {
+const Historial = () => {
   const [transcripciones, setTranscripciones] = useState([]);
   const [selectedTranscripcion, setSelectedTranscripcion] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,9 +39,9 @@ const Historial = forwardRef((props, ref) => {
     }
   };
 
-  useImperativeHandle(ref, () => ({
-    refresh: () => fetchHistorial()
-  }));
+  const updateAudioInList = (id, updatedFields) => {
+    setTranscripciones(prev => prev.map(t => t.id === id ? { ...t, ...updatedFields } : t));
+  };
 
   useEffect(() => {
     fetchHistorial();
@@ -149,10 +148,11 @@ const Historial = forwardRef((props, ref) => {
           onClose={() => setSelectedTranscripcion(null)}
           transcripcion={selectedTranscripcion || {}}
           onDelete={() => fetchHistorial()}
+          onUpdateAudio={updateAudioInList}
         />
       </main>
     </div>
   );
-});
+};
 
 export default Historial;
