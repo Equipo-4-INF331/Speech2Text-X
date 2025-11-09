@@ -13,6 +13,21 @@ pipeline {
                     url: 'https://github.com/Equipo-4-INF331/Speech2Text-X.git'
             }
         }
+        
+        stage('Debug environment') {
+            steps {
+        	sh '''
+            	    echo "=== PATH ==="
+            	    echo $PATH
+            	    echo "=== Node version ==="
+ 	    	    node -v
+            	    echo "=== NPM version ==="
+            	    npm -v
+            	    echo "=== NPX version ==="
+            	    npx -v
+        	'''
+    	    }
+	}
 
         stage('Backend setup') {
             steps {
