@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import OpenAI from 'openai';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { generarResumen, generarIdeasPrincipales, generarExtractos } from '../services/aiService.js';
 
 const openai = new OpenAI({ apiKey: process.env.VITE_OPENAI_API_KEY });
 
@@ -130,6 +131,38 @@ export const newAudio = async (req, res) => {
       VALUES (${username}, ${name}, ${audioUrl}, ${transcriptionResult})
       RETURNING *
     `;
+
+    // --- 🤖 GENERAR CONTENIDO AI AUTOMÁTICAMENTE ---
+    if (transcriptionResult) {
+      try {
+        console.log('🤖 Generando resumen, ideas principales y extractos automáticamente...');
+        const [resumenResult, ideasResult, extractosResult] = await Promise.allSettled([
+          generarResumen(transcriptionResult),
+          generarIdeasPrincipales(transcriptionResult),
+          generarExtractos(transcriptionResult)
+        ]);
+
+        const resumen = resumenResult.status === 'fulfilled' ? resumenResult.value.resumen : null;
+        const ideas_principales = ideasResult.status === 'fulfilled' ? ideasResult.value.ideas : null;
+        const extractos = extractosResult.status === 'fulfilled' ? extractosResult.value.extractos : null;
+
+        // Actualizar la DB con los resultados
+        await db`
+          UPDATE audios
+          SET resumen = ${resumen}, ideas_principales = ${ideas_principales}, extractos = ${extractos}
+          WHERE id = ${elem[0].id}
+        `;
+
+        // Actualizar el objeto retornado
+        elem[0].resumen = resumen;
+        elem[0].ideas_principales = ideas_principales;
+        elem[0].extractos = extractos;
+
+        console.log('✅ Contenido AI generado y guardado exitosamente');
+      } catch (error) {
+        console.error('❌ Error generando contenido AI:', error);
+      }
+    }
 
     res.status(201).json({ success: true, data: elem[0] });
   } catch (error) {

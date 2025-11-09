@@ -28,9 +28,16 @@ async function initDB() {
         name VARCHAR(32) NOT NULL,
         audio VARCHAR(255) NOT NULL,
         transcription TEXT,
+        resumen TEXT,
+        ideas_principales JSON,
+        extractos JSON,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
+    // Añadir columnas si no existen
+    await db`ALTER TABLE audios ADD COLUMN IF NOT EXISTS resumen TEXT`;
+    await db`ALTER TABLE audios ADD COLUMN IF NOT EXISTS ideas_principales JSON`;
+    await db`ALTER TABLE audios ADD COLUMN IF NOT EXISTS extractos JSON`;
     console.log("Base de datos iniciada correctamente")
   } catch (error) {
     console.error("Error iniciando base de datos", error);
