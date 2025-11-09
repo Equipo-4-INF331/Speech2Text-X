@@ -28,7 +28,6 @@ export const historial = async(req,res) =>{
     const{username} = req.body;
     const transcripciones = await db`SELECT * FROM audios WHERE username = ${username} ORDER BY created_at DESC`
     res.status(200).json({ success: true, data: transcripciones });
-    console.log('query result:', transcripciones);
 
   } catch (error){
     res.status(500).json({ error: `Error al obtener el historial: ${error}`});
@@ -80,11 +79,9 @@ export const newAudio = async (req, res) => {
       if (process.env.AWS_S3_PUBLIC === "true") {
         putParams.ACL = "public-read";
       }
-      console.log("estoy aqui \n\n\n")
       try {
         await s3.send(new PutObjectCommand(putParams));
       } catch (s3err) {
-        console.log("estoy aqui \n\n\n")
         console.error("❌ Error subiendo a S3:", s3err);
         return res.status(500).json({ error: "Error al subir a S3", details: s3err.message });
       }
@@ -127,7 +124,6 @@ export const newAudio = async (req, res) => {
 
         transcriptionResult = diarizedText || null;
 
-        console.log(transcriptionResult);
 
         fs.unlinkSync(tmpPath);
         console.log("✅ Transcripción completada con éxito");
@@ -156,10 +152,6 @@ export const newAudio = async (req, res) => {
         const resumen = resumenResult.status === 'fulfilled' ? resumenResult.value.resumen : null;
         const ideas_principales = ideasResult.status === 'fulfilled' ? ideasResult.value.ideas : null;
         const extractos = extractosResult.status === 'fulfilled' ? extractosResult.value.extractos : null;
-
-        console.log(resumen)
-        console.log(ideas_principales)
-        console.log(extractos)
         // Actualizar la DB con los resultados
         await db`
           UPDATE audios
