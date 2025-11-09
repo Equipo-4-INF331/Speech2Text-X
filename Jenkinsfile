@@ -24,7 +24,7 @@ pipeline {
             steps {
                 dir('front') {
                     sh 'npm ci'
-                    sh 'npm run build'
+                    sh 'npx vite build'
                 }
             }
         }
