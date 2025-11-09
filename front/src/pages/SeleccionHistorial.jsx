@@ -27,6 +27,7 @@ const SeleccionHistorial = ({ show, onClose, transcripcion, onDelete, onUpdateAu
   };
 
   useEffect(() => {
+    console.log(transcripcion.audio)
     if (transcripcion?.transcription) {
       setTexto(transcripcion.transcription);
       // Limpiar resultados de IA al cambiar transcripción
@@ -124,7 +125,7 @@ const SeleccionHistorial = ({ show, onClose, transcripcion, onDelete, onUpdateAu
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <span className="modal-close" onClick={handleClose}>&times;</span>
         <h1 style={{ textAlign: "center" }}>{transcripcion.name}</h1>
-        <audio className='audio-container' controls src={transcripcion.audio}></audio>
+        <audio className='audio-container' controls src={transcripcion.url}></audio>
 
 
         <div style={{ marginTop: '16px', textAlign: 'center', position: 'relative' }}>

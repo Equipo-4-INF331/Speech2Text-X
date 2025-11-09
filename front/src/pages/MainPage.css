@@ -1,0 +1,187 @@
+/* ====== LAYOUT GENERAL ====== */
+.main-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--color-bg);
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  color: var(--color-text);
+}
+
+/* ====== CONTENIDO PRINCIPAL ====== */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  position: relative;
+}
+
+/* ====== MENSAJES ====== */
+.message {
+  position: fixed;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  z-index: 1000;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  color: #fff;
+}
+
+.message.success {
+  background-color: var(--color-accent);
+}
+
+.message.error {
+  background-color: #dc2626;
+}
+
+/* ====== TEXTOS ====== */
+.main-title {
+  font-size: 3rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--color-card-text);
+  margin-bottom: 8px;
+}
+
+.main-subtitle {
+  font-size: 1.25rem;
+  text-align: center;
+  color: var(--color-text);
+  margin-bottom: 16px;
+}
+
+/* ====== BOTÓN DE CARGA ====== */
+.hidden-input {
+  display: none;
+}
+
+.upload-button {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: var(--color-accent);
+  color: #fff;
+  font-size: 48px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  margin: 16px 0;
+}
+
+.upload-button:hover {
+  background-color: color-mix(in srgb, var(--color-accent) 80%, black);
+  transform: scale(1.05);
+}
+
+/* ====== TARJETA DE SUBIDA ====== */
+.upload-card {
+  margin-top: 16px;
+  padding: 20px;
+  border: 1px solid var(--bg-hover);
+  border-radius: 12px;
+  background-color: var(--color-card-bg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 420px;
+  color: var(--color-card-text);
+}
+
+.upload-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-card-text);
+  margin-bottom: 6px;
+}
+
+.upload-input {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  background-color: var(--color-modal1-bg);
+  border: 1px solid #444;
+  font-size: 0.95rem;
+  color: var(--color-card-text);
+  transition: border-color 0.2s ease;
+}
+
+.upload-input:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+/* ====== BOTONES ====== */
+.upload-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.btn.primary {
+  background-color: var(--color-accent);
+  color: #fff;
+}
+
+.btn.primary:hover {
+  background-color: color-mix(in srgb, var(--color-accent) 80%, black);
+}
+
+.btn.secondary {
+  background-color: var(--color-modal1-bg);
+  color: var(--color-card-text);
+  border: 1px solid var(--bg-hover);
+}
+
+.btn.secondary:hover {
+  background-color: var(--bg-hover);
+}
+.spinner {
+  border: 3px solid #ccc;
+  border-top: 3px solid var(--color-accent);
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.audio-preview,
+.audio-player {
+  width: 100%;
+  margin-top: 8px;
+  border-radius: 8px;
+  background-color: var(--color-card-bg);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* ====== TRANSICIONES SUAVES ENTRE TEMAS ====== */
+.main-container,
+.main-content,
+.upload-card,
+.upload-button,
+.main-title,
+.main-subtitle {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
