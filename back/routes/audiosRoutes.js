@@ -3,7 +3,9 @@ import { getAudio, newAudio, deleteAudio, updateTranscription, historial, filter
 
 
 const router = express.Router();
-
+router.get("/", (req, res) => {
+  res.json({ ok: true, message: "Router de audios operativo" });
+});
 router.get('/filter', filterAudios);
 router.get('/:id', getAudio);
 router.post('/historial', historial);

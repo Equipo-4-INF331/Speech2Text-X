@@ -1,6 +1,12 @@
-// Configuración centralizada de la aplicación
+// front/src/config.js
+const apiHost =
+  window.location.hostname === "localhost"
+    ? "http://localhost:5000"
+    : "http://18.222.215.176";
+
 const config = {
-  API_URL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+  API_URL: apiHost,
 };
 
 export default config;
+

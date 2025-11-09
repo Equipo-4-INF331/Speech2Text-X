@@ -1,7 +1,10 @@
 {
   "scripts": {
     "dev": "nodemon back/index.js",
-    "test": "jest --coverage"
+    "test": "jest --coverage",
+    "start": "node back/index.js",
+    "build": "cd front && npm install && npm run build",
+    "postinstall": "npm run build"
   },
   "type": "module",
   "dependencies": {
@@ -17,6 +20,7 @@
     "multer": "^2.0.2",
     "openai": "^6.3.0",
     "pg": "^8.16.3",
+    "postgres": "^3.4.7",
     "react-router-dom": "^7.9.4"
   },
   "devDependencies": {

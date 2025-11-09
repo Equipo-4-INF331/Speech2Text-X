@@ -123,6 +123,7 @@ export const newAudio = async (req, res) => {
         console.error("❌ Error en transcripción OpenAI:", openErr);
       }
     }
+    console.log("🗃️ Insertando en BD:", { username, name, audioUrl, transcriptionResult });
 
     // --- 🗃️ GUARDAR EN BASE DE DATOS ---
     const elem = await db`
@@ -133,7 +134,7 @@ export const newAudio = async (req, res) => {
 
     res.status(201).json({ success: true, data: elem[0] });
   } catch (error) {
-    console.error(error.stack || error);
+    console.error(error);
     res.status(500).json({ error: "Error al crear el audio" });
   } finally {
     if (fs.existsSync(tmpPath)) {
