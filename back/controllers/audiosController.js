@@ -305,7 +305,6 @@ export const filterAudios = async (req, res) => {
       })
     );
 
-    console.log(audiosWithUrls)
     res.set('Cache-Control', 'no-cache');
     res.status(200).json({ success: true, data: audiosWithUrls  });
   } catch (error) {
