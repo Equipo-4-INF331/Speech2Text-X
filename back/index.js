@@ -37,15 +37,20 @@ app.use(helmet({
 }));
 app.use("/api/audios", audiosRoutes);
 
-const frontendPath = path.join(__dirname, "../front/dist"); // o "../front/build" si usas React (CRA)
+const frontendPath = path.join(
+  __dirname,
+  process.env.NODE_ENV === 'production' ? '../front/dist' : '../front'
+);
+
 app.use(express.static(frontendPath));
+
 app.get("/favicon.ico", (req, res) => {
   const faviconPath = path.join(frontendPath, "favicon.ico");
   console.log("Intentando servir favicon desde:", faviconPath);
   res.sendFile(faviconPath, (err) => {
     if (err) {
       console.error("Error sirviendo favicon:", err);
-      res.status(204).end(); // evita 500 si falla
+      res.status(204).end();
     }
   });
 });

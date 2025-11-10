@@ -13,33 +13,49 @@ pipeline {
                     url: 'https://github.com/Equipo-4-INF331/Speech2Text-X.git'
             }
         }
-        
-        stage('Debug environment') {
-            steps {
-        	sh '''
-            	    echo "=== PATH ==="
-            	    echo $PATH
-            	    echo "=== Node version ==="
- 	    	    node -v
-            	    echo "=== NPM version ==="
-            	    npm -v
-            	    echo "=== NPX version ==="
-            	    npx -v
-        	'''
-    	    }
-	}
 
         stage('Backend setup') {
             steps {
-                sh 'npm ci'
+                dir('back') {
+                    sh 'npm ci'
+                }
+            }
+        }
+
+        stage('Backend tests') {
+            steps {
+                dir('back') {
+                    sh '''
+                    echo "Running backend tests..."
+                    npm test || { echo "Backend tests failed"; exit 1; }
+                    '''
+                }
+            }
+        }
+
+        stage('Frontend setup') {
+            steps {
+                dir('front') {
+                    sh 'npm ci'
+                }
+            }
+        }
+
+        stage('Frontend tests') {
+            steps {
+                dir('front') {
+                    sh '''
+                    echo "Running frontend tests..."
+                    npm test || { echo "Frontend tests failed"; exit 1; }
+                    '''
+                }
             }
         }
 
         stage('Frontend build') {
             steps {
                 dir('front') {
-                    sh 'npm ci'
-                    sh 'npx vite build'
+                    sh 'npm run build'
                 }
             }
         }
@@ -47,11 +63,21 @@ pipeline {
         stage('Deploy') {
             steps {
                 sh '''
-                # Reiniciar el backend
+                echo "Deploying application..."
                 pm2 restart all || pm2 start back/index.js --name speech2text
                 sudo systemctl restart nginx
                 '''
             }
         }
     }
+
+    post {
+        failure {
+            echo '❌ Pipeline failed!'
+        }
+        success {
+            echo '✅ Deployment successful!'
+        }
+    }
 }
+
