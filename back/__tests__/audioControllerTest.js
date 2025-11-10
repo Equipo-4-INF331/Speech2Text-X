@@ -1,3 +1,18 @@
+import { historial, getAudio, newAudio, deleteAudio, updateTranscription, filterAudios, s3 } from '../controllers/audiosController.js';
+import { db } from '../database.js';
+import fs from 'fs';
+import OpenAI from 'openai';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+
+
+process.env.AWS_S3_BUCKET = 'test-bucket';
+process.env.AWS_ACCESS_KEY_ID = 'fake';
+process.env.AWS_SECRET_ACCESS_KEY = 'fake';
+process.env.AWS_REGION = 'us-east-1';
+process.env.AWS_S3_PUBLIC = 'fake';
+
+
+
 jest.mock('../database.js', () => ({
   db: jest.fn(),
 }));
@@ -46,19 +61,6 @@ jest.mock('../database.js', () => ({
     return [];
   }),
 }));
-
-import { historial, getAudio, newAudio, deleteAudio, updateTranscription, filterAudios, s3 } from '../controllers/audiosController.js';
-import { db } from '../database.js';
-import fs from 'fs';
-import OpenAI from 'openai';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-
-
-process.env.AWS_S3_BUCKET = 'test-bucket';
-process.env.AWS_ACCESS_KEY_ID = 'fake';
-process.env.AWS_SECRET_ACCESS_KEY = 'fake';
-process.env.AWS_REGION = 'us-east-1';
-process.env.AWS_S3_PUBLIC = 'fake';
 
 describe('Audio Controller', () => {
 
