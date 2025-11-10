@@ -73,7 +73,7 @@ pipeline {
             steps {
                 dir('front') {
                     sh 'npm run build'
-                    sh 'rsync -a front/dist/ /home/ubuntu/Speech2Text-X/front/dist/'
+                    sh 'rsync -a dist/ /home/ubuntu/Speech2Text-X/front/dist/'
                 }
             }
         }
@@ -105,10 +105,10 @@ pipeline {
             echo 'Pipeline finalizado'
         }
         failure {
-            slackSend(channel: '#deploy', color: 'danger', message: "❌ Falló *${env.JOB_NAME}* #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Ver logs>)")
+            slackSend(channel: '#jenkins', color: 'danger', message: "❌ Falló *${env.JOB_NAME}* #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Ver logs>)")
         }
         success {
-            slackSend(channel: '#deploy', color: 'good', message: "✅ Éxito en *${env.JOB_NAME}* #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Ver detalles>)")
+            slackSend(channel: '#jenkins', color: 'good', message: "✅ Éxito en *${env.JOB_NAME}* #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Ver detalles>)")
         }
     }
 }
