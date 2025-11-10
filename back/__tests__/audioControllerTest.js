@@ -17,13 +17,17 @@ jest.mock('../database.js', () => ({
   db: jest.fn(),
 }));
 
-jest.mock('fs', () => ({
-  mkdirSync: jest.fn(),
-  writeFileSync: jest.fn(),
-  createReadStream: jest.fn(() => 'stream'),
-  unlinkSync: jest.fn(),
-  existsSync: jest.fn(() => false),
-}));
+jest.mock('fs', () => {
+  const real = jest.requireActual('fs');
+  return {
+    ...real,
+    mkdirSync: jest.fn(),
+    writeFileSync: jest.fn(),
+    createReadStream: jest.fn(() => 'stream'),
+    unlinkSync: jest.fn(),
+    existsSync: jest.fn(() => false),
+  };
+});
 
 jest.mock('@aws-sdk/client-s3', () => {
   return {
@@ -33,6 +37,10 @@ jest.mock('@aws-sdk/client-s3', () => {
     PutObjectCommand: jest.fn((params) => ({ ...params })),
   };
 });
+
+jest.mock('@aws-sdk/s3-request-presigner', () => ({
+  getSignedUrl: jest.fn().mockResolvedValue('https://signed-url.example'),
+}));
 
 jest.mock('openai', () => {
   return jest.fn().mockImplementation(() => ({

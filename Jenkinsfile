@@ -19,38 +19,6 @@ pipeline {
 
     stages {
 
-        stage('Env info') {
-            steps {
-                sh '''
-                set -x
-                echo "=== BINARIOS Y RUTAS ==="
-                which node || true
-                which npm || true
-                node -v || true
-                npm -v || true
-                npx -v || true
-
-                echo "=== SISTEMA ==="
-                uname -a || true
-                cat /etc/os-release || true
-                openssl version || true
-
-                echo "=== VERSIONES DE NODE DETALLADAS ==="
-                node -p "process.version" || true
-                node -p "JSON.stringify(process.versions, null, 2)" || true
-
-                echo "=== ¿fs.promises existe? ==="
-                node -e "console.log('fs.promises?', !!require('fs').promises)" || true
-
-                echo "=== DEPENDENCIAS RELEVANTES ==="
-                npm ls --depth=0 || true
-                npm ls @aws-sdk/client-s3 @aws-sdk/s3-request-presigner || true
-
-                echo "=== VARIABLES DE ENTORNO (filtrado) ==="
-                printenv | sort | egrep 'NODE|NPM|JENKINS|PATH|HOME' || true
-                '''
-            }
-        }
         stage('Checkout') {
             steps {
                 git branch: 'hotfix/v1.1.0',
