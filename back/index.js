@@ -15,9 +15,13 @@ const __dirname = path.dirname(__filename);
 
 if (process.env.NODE_ENV === 'production') {
   dotenv.config({ path: '/var/lib/jenkins/workspace/s2t-ci-cd-pipeline/.env' });
+  console.log("📦 Cargando .env desde Jenkins");
 } else {
-  dotenv.config();
+  dotenv.config({ path: path.resolve(__dirname, '.env') });
+  console.log("📦 Cargando .env local");
 }
+
+console.log("🔑 OPENAI_API_KEY:", process.env.OPENAI_API_KEY ? "✅ cargada" : "❌ no encontrada");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
