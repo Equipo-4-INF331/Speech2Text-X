@@ -105,10 +105,10 @@ pipeline {
             echo 'Pipeline finalizado.'
         }
         failure {
-            echo 'Algo falló durante el pipeline. Revisar logs.'
+            slackSend(channel: '#deploy', color: 'danger', message: "❌ Falló *${env.JOB_NAME}* #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Ver logs>)")
         }
         success {
-            echo 'Pipeline completado con éxito.'
+            slackSend(channel: '#deploy', color: 'good', message: "✅ Éxito en *${env.JOB_NAME}* #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Ver detalles>)")
         }
     }
 }
