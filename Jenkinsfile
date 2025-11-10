@@ -20,7 +20,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'hotfix/jenkinsfile',  // usa la rama actual del SCM
+                git branch: 'main,  // usa la rama actual del SCM
                     credentialsId: 'github-jenkins',
                     url: 'https://github.com/Equipo-4-INF331/Speech2Text-X.git'
             }
