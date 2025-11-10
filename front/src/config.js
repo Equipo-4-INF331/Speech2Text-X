@@ -2,7 +2,7 @@
 const apiHost =
   window.location.hostname === "localhost"
     ? "http://localhost:5000"
-    : "http://3.135.233.99";
+    : "http://13.58.67.175";
 
 const config = {
   API_URL: apiHost,
