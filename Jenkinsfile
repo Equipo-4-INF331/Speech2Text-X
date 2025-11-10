@@ -102,7 +102,7 @@ pipeline {
 
     post {
         always {
-            echo 'Pipeline finalizado.'
+            echo 'Pipeline finalizado'
         }
         failure {
             slackSend(channel: '#deploy', color: 'danger', message: "❌ Falló *${env.JOB_NAME}* #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Ver logs>)")
