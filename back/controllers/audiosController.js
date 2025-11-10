@@ -103,7 +103,7 @@ export const newAudio = async (req, res) => {
         const ext = path.extname(file.originalname) || ".m4a";
         const tmpDir = path.join(process.cwd(), "tmp");
         fs.mkdirSync(tmpDir, { recursive: true });
-        const tmpPath = path.join(tmpDir, `tmp_${Date.now()}${ext}`);
+        tmpPath = path.join(tmpDir, `tmp_${Date.now()}${ext}`);
         fs.writeFileSync(tmpPath, file.buffer);
 
         const stream = fs.createReadStream(tmpPath);
