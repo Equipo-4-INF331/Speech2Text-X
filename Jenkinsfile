@@ -38,14 +38,14 @@ pipeline {
                 stage('Backend tests') {
                     steps {
                         dir('back') {
-                            sh 'npm test || echo "Tests fallaron, revisar logs"'
+                            sh 'npm run test'
                         }
                     }
                 }
                 stage('Frontend tests') {
                     steps {
                         dir('front') {
-                            sh 'npm test || echo "Tests fallaron, revisar logs"'
+                            sh 'npm run test'
                         }
                     }
                 }
