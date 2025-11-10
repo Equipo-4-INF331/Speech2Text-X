@@ -34,6 +34,9 @@ pipeline {
         }
 
         stage('Testing') {
+            environment {
+                NODE_ENV = 'development'
+            }
             parallel {
                 stage('Backend tests') {
                     steps {
