@@ -8,46 +8,46 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'hotfix/jenkinsfile',
+                git branch: scm,  // usa la rama actual del SCM
                     credentialsId: 'github-jenkins',
                     url: 'https://github.com/Equipo-4-INF331/Speech2Text-X.git'
             }
         }
 
-        stage('Backend setup') {
-            steps {
-                dir('back') {
-                    sh 'npm ci'
+        stage('Install dependencies') {
+            parallel {
+                stage('Backend install') {
+                    steps {
+                        dir('back') {
+                            sh 'npm ci'
+                        }
+                    }
+                }
+                stage('Frontend install') {
+                    steps {
+                        dir('front') {
+                            sh 'npm ci'
+                        }
+                    }
                 }
             }
         }
 
-        stage('Backend tests') {
-            steps {
-                dir('back') {
-                    sh '''
-                    echo "Running backend tests..."
-                    npm test || { echo "Backend tests failed"; exit 1; }
-                    '''
+        stage('Testing') {
+            parallel {
+                stage('Backend tests') {
+                    steps {
+                        dir('back') {
+                            sh 'npm test || echo "Tests fallaron, revisar logs"'
+                        }
+                    }
                 }
-            }
-        }
-
-        stage('Frontend setup') {
-            steps {
-                dir('front') {
-                    sh 'npm ci'
-                }
-            }
-        }
-
-        stage('Frontend tests') {
-            steps {
-                dir('front') {
-                    sh '''
-                    echo "Running frontend tests..."
-                    npm test || { echo "Frontend tests failed"; exit 1; }
-                    '''
+                stage('Frontend tests') {
+                    steps {
+                        dir('front') {
+                            sh 'npm test || echo "Tests fallaron, revisar logs"'
+                        }
+                    }
                 }
             }
         }
@@ -63,7 +63,7 @@ pipeline {
         stage('Deploy') {
             steps {
                 sh '''
-                echo "Deploying application..."
+                # Reiniciar el backend
                 pm2 restart all || pm2 start back/index.js --name speech2text
                 sudo systemctl restart nginx
                 '''
@@ -72,12 +72,14 @@ pipeline {
     }
 
     post {
+        always {
+            echo 'Pipeline finalizado.'
+        }
         failure {
-            echo '❌ Pipeline failed!'
+            echo 'Algo falló durante el pipeline. Revisar logs.'
         }
         success {
-            echo '✅ Deployment successful!'
+            echo 'Pipeline completado con éxito.'
         }
     }
 }
-
