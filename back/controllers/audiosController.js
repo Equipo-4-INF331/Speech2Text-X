@@ -5,7 +5,7 @@ import path from 'path';
 import OpenAI from 'openai';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
-const openai = new OpenAI({ apiKey: process.env.VITE_OPENAI_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -92,7 +92,7 @@ export const newAudio = async (req, res) => {
 
     // --- 🧠 TRANSCRIPCIÓN CON OPENAI WHISPER ---
     let transcriptionResult = transcription || null;
-    if (file && process.env.VITE_OPENAI_API_KEY) {
+    if (file && process.env.OPENAI_API_KEY) {
       try {
         // ✅ normalizar tipo MIME
         let mimeType = file.mimetype;
