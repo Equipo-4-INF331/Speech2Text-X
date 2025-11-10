@@ -1,21 +1,20 @@
-import { historial, getAudio, newAudio, deleteAudio, updateTranscription, filterAudios, s3 } from '../controllers/audiosController.js';
-import { db } from '../database.js';
-import fs from 'fs';
-import OpenAI from 'openai';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-
-
 process.env.AWS_S3_BUCKET = 'test-bucket';
 process.env.AWS_ACCESS_KEY_ID = 'fake';
 process.env.AWS_SECRET_ACCESS_KEY = 'fake';
 process.env.AWS_REGION = 'us-east-1';
 process.env.AWS_S3_PUBLIC = 'fake';
 
-
-
-jest.mock('../database.js', () => ({
-  db: jest.fn(),
-}));
+jest.mock('openai', () => {
+  const MockedOpenAI = class {
+    constructor() {}
+    audio = {
+      transcriptions: {
+        create: jest.fn().mockResolvedValue({ text: 'transcripción-ok' }),
+      },
+    };
+  };
+  return { __esModule: true, default: MockedOpenAI };
+});
 
 jest.mock('fs', () => {
   const real = jest.requireActual('fs');
@@ -30,33 +29,18 @@ jest.mock('fs', () => {
 });
 
 jest.mock('@aws-sdk/client-s3', () => {
-  const send = jest.fn().mockResolvedValue({}); // puedes sobreescribir en cada test
+  const send = jest.fn().mockResolvedValue({});
   const S3Client = jest.fn(() => ({ send }));
-  // Deben ser funciones constructor
   const PutObjectCommand = jest.fn(function PutObjectCommand() {});
   const GetObjectCommand = jest.fn(function GetObjectCommand() {});
   return { S3Client, PutObjectCommand, GetObjectCommand };
 });
 
 jest.mock('@aws-sdk/s3-request-presigner', () => ({
-  // Devuelve algo estable para las URLs firmadas
   getSignedUrl: jest.fn().mockResolvedValue('https://signed-url.example/file.mp3'),
 }));
 
-// Mock de OpenAI devolviendo segments como array (para evitar forEach undefined)
-jest.mock('openai', () => ({
-  OpenAI: jest.fn().mockImplementation(() => ({
-    audio: {
-      transcriptions: {
-        create: jest
-          .fn()
-          .mockResolvedValue({ text: 'transcripción mock', segments: [] }),
-      },
-    },
-  })),
-}));
-
-// Esto se creo para mockear cuando usamos filtros ya que jest no lo reconoce a lo anterior como db,  Eso es una tagged template function call, y db no se invoca como una función normal (db()), sino como
+// Un SOLO mock de la DB (tagged template compatible)
 jest.mock('../database.js', () => ({
   db: jest.fn(async (...args) => {
     const query = args[0]?.join ? args[0].join(' ') : args[0];
@@ -67,15 +51,19 @@ jest.mock('../database.js', () => ({
         name: 'El que se fue a milipilla',
         audio: 'link',
         transcription: 'El que se fue a milipilla perdio su silla',
-        created_at: new Date('2025-10-17T20:00:00Z')
+        created_at: new Date('2025-10-17T20:00:00Z'),
       }];
     }
     return [];
   }),
 }));
 
-describe('Audio Controller', () => {
+// --- Ahora sí: importa lo que testeas (después de los mocks) ---
+import { historial, getAudio, newAudio, deleteAudio, updateTranscription, filterAudios, s3 } from '../controllers/audiosController.js';
+import { db } from '../database.js';
 
+// --- Tests ---
+describe('Audio Controller', () => {
   let res;
   beforeEach(() => {
     res = {
@@ -233,12 +221,12 @@ describe('Audio Controller', () => {
 
   // ---------- filterAudios ----------
   it('debería filtrar audios por username', async () => {
-    db.mockResolvedValueOnce([{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z') }]);
+    db.mockResolvedValueOnce([{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'),  }]);
     const req = { query:{ name: "El que se fue a milipilla",description:"El que se fue a milipilla perdio su silla" ,dateFrom: new Date('2025-10-16T20:00:00Z'),dateTo: new Date('2025-10-17T20:00:00Z'), username:'pepe'} };
     await filterAudios(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-cache');
-    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z') }]});
+    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.example/file.mp3',}]});
   });
 
     it('debería filtrar audios por todos los filtros', async () => {
@@ -247,7 +235,7 @@ describe('Audio Controller', () => {
     await filterAudios(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-cache');
-    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z') }]});
+    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.example/file.mp3', }]});
   });
   
 
