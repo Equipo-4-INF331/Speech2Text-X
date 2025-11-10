@@ -118,7 +118,8 @@ export const newAudio = async (req, res) => {
         });
 
         let diarizedText = "";
-        response.segments.forEach(seg => {
+        const segments = Array.isArray(response?.segments) ? response.segments : [];
+        segments.forEach(seg => {
           diarizedText += `${seg.speaker}: ${seg.text.trim()}\n`;
         });
 

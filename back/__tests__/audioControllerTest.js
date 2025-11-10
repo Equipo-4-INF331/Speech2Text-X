@@ -30,27 +30,31 @@ jest.mock('fs', () => {
 });
 
 jest.mock('@aws-sdk/client-s3', () => {
-  return {
-    S3Client: jest.fn().mockImplementation(() => ({
-      send: jest.fn(() => Promise.resolve('uploaded')),
-    })),
-    PutObjectCommand: jest.fn((params) => ({ ...params })),
-  };
+  const send = jest.fn().mockResolvedValue({}); // puedes sobreescribir en cada test
+  const S3Client = jest.fn(() => ({ send }));
+  // Deben ser funciones constructor
+  const PutObjectCommand = jest.fn(function PutObjectCommand() {});
+  const GetObjectCommand = jest.fn(function GetObjectCommand() {});
+  return { S3Client, PutObjectCommand, GetObjectCommand };
 });
 
 jest.mock('@aws-sdk/s3-request-presigner', () => ({
-  getSignedUrl: jest.fn().mockResolvedValue('https://signed-url.example'),
+  // Devuelve algo estable para las URLs firmadas
+  getSignedUrl: jest.fn().mockResolvedValue('https://signed-url.example/file.mp3'),
 }));
 
-jest.mock('openai', () => {
-  return jest.fn().mockImplementation(() => ({
+// Mock de OpenAI devolviendo segments como array (para evitar forEach undefined)
+jest.mock('openai', () => ({
+  OpenAI: jest.fn().mockImplementation(() => ({
     audio: {
       transcriptions: {
-        create: jest.fn(() => Promise.resolve({ text: 'Transcripción mock' })),
+        create: jest
+          .fn()
+          .mockResolvedValue({ text: 'transcripción mock', segments: [] }),
       },
     },
-  }));
-});
+  })),
+}));
 
 // Esto se creo para mockear cuando usamos filtros ya que jest no lo reconoce a lo anterior como db,  Eso es una tagged template function call, y db no se invoca como una función normal (db()), sino como
 jest.mock('../database.js', () => ({
