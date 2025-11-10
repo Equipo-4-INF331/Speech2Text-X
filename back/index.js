@@ -4,6 +4,14 @@ import morgan from "morgan";
 import cors from "cors";
 import dotenv from "dotenv";
 
+if (process.env.NODE_ENV === 'production') {
+  dotenv.config({ path: '/var/lib/jenkins/workspace/s2t-ci-cd-pipeline/.env' });
+  console.log("📦 Cargando .env desde Jenkins");
+} else {
+  dotenv.config({ path: path.resolve(__dirname, '.env') });
+  console.log("📦 Cargando .env local");
+}
+
 import audiosRoutes from "./routes/audiosRoutes.js";
 import { db } from "./database.js";
 import path from "path";
@@ -12,14 +20,6 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-if (process.env.NODE_ENV === 'production') {
-  dotenv.config({ path: '/var/lib/jenkins/workspace/s2t-ci-cd-pipeline/.env' });
-  console.log("📦 Cargando .env desde Jenkins");
-} else {
-  dotenv.config({ path: path.resolve(__dirname, '.env') });
-  console.log("📦 Cargando .env local");
-}
 
 console.log("🔑 OPENAI_API_KEY:", process.env.OPENAI_API_KEY ? "✅ cargada" : "❌ no encontrada");
 
