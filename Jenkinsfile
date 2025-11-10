@@ -41,6 +41,7 @@ pipeline {
                 stage('Backend tests') {
                     steps {
                         dir('back') {
+                            sh 'npm ci --include=dev'
                             sh 'npm run test'
                         }
                     }
@@ -48,6 +49,7 @@ pipeline {
                 stage('Frontend tests') {
                     steps {
                         dir('front') {
+                            sh 'npm ci --include=dev'
                             sh 'npm run test'
                         }
                     }
