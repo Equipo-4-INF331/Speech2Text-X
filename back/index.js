@@ -13,7 +13,11 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
+if (process.env.NODE_ENV === 'production') {
+  dotenv.config({ path: '/var/lib/jenkins/workspace/s2t-ci-cd-pipeline/.env' });
+} else {
+  dotenv.config();
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
