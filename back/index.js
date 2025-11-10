@@ -25,7 +25,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      connectSrc: ["'self'", "http:", "https:", "http://3.140.245.161:5000"],
+      connectSrc: ["'self'", "http:", "https:", "http://3.135.233.99:5000"],
       mediaSrc: ["'self'", "https://speech2textx.s3.us-east-2.amazonaws.com"],
       scriptSrc: ["'self'", "'unsafe-inline'", "http:", "https:"],
       styleSrc: ["'self'", "'unsafe-inline'", "http:", "https:"],
