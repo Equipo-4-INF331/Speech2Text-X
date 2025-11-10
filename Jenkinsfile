@@ -79,11 +79,22 @@ pipeline {
 
         stage('Deploy') {
             steps {
+                dir('back') {
                 sh '''
-                # Reiniciar el backend
-                pm2 restart all || pm2 start back/index.js --name speech2text
-                sudo systemctl restart nginx
+                # recrear symlink al .env del workspace padre (por si el checkout limpio lo borra)
+                ln -sf ../.env .env
+
+                # reinstalar por si cambió algo del back
+                npm ci --omit=dev
+
+                # refrescar proceso con entorno actualizado
+                pm2 start index.js --name speech2text || true
+                pm2 restart speech2text --update-env
+
+                pm2 save
                 '''
+                }
+                sh 'sudo systemctl reload nginx || true'
             }
         }
     }
