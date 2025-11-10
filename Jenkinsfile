@@ -3,6 +3,18 @@ pipeline {
 
     environment {
         NODE_ENV = 'production'
+        OPEN_API_KEY = credentials('OPEN_API_KEY')
+        PORT = credentials('PORT')
+        PGUSER = credentials('PGUSER')
+        PGPASSWORD = credentials('PGPASSWORD')
+        PGHOST = credentials('PGHOST')
+        PGDATABASE = credentials('PGDATABASE')
+        AWS_S3_BUCKET = credentials('AWS_S3_BUCKET')
+        AWS_REGION = credentials('AWS_REGION')
+        AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+
+
     }
 
     stages {
