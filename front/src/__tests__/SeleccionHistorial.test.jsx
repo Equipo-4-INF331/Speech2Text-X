@@ -210,4 +210,213 @@ describe('SeleccionHistorial - Smoke Tests', () => {
     
     expect(onClose).toHaveBeenCalled();
   });
+
+  // Tests para funcionalidades de ChatIA
+  test('debe generar resumen exitosamente', async () => {
+    const onUpdateAudio = jest.fn();
+    axios.post.mockResolvedValueOnce({
+      data: { data: { resumen: 'Resumen generado por IA' } }
+    });
+
+    render(
+      <SeleccionHistorial 
+        show={true}
+        transcripcion={mockAudio}
+        onClose={jest.fn()}
+        onDelete={jest.fn()}
+        onUpdateAudio={onUpdateAudio}
+      />
+    );
+
+    const resumenButton = screen.getByText('Generar Resumen');
+    fireEvent.click(resumenButton);
+
+    // Verificar estado de carga
+    expect(screen.getByText('Generando análisis...')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(axios.post).toHaveBeenCalledWith(
+        expect.stringContaining('/api/audios/1/resumen')
+      );
+      expect(onUpdateAudio).toHaveBeenCalledWith(1, { resumen: 'Resumen generado por IA' });
+      expect(screen.getByText('Resumen generado por IA')).toBeInTheDocument();
+    });
+  });
+
+  test('debe manejar error al generar resumen', async () => {
+    axios.post.mockRejectedValueOnce(new Error('API error'));
+
+    render(
+      <SeleccionHistorial 
+        show={true}
+        transcripcion={mockAudio}
+        onClose={jest.fn()}
+        onDelete={jest.fn()}
+        onUpdateAudio={jest.fn()}
+      />
+    );
+
+    const resumenButton = screen.getByText('Generar Resumen');
+    fireEvent.click(resumenButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Error al generar resumen')).toBeInTheDocument();
+    });
+  });
+
+  test('debe generar ideas principales exitosamente', async () => {
+    const onUpdateAudio = jest.fn();
+    axios.post.mockResolvedValueOnce({
+      data: { data: { ideas: ['Idea 1', 'Idea 2', 'Idea 3'] } }
+    });
+
+    render(
+      <SeleccionHistorial 
+        show={true}
+        transcripcion={mockAudio}
+        onClose={jest.fn()}
+        onDelete={jest.fn()}
+        onUpdateAudio={onUpdateAudio}
+      />
+    );
+
+    const ideasButton = screen.getByText('Ideas Principales');
+    fireEvent.click(ideasButton);
+
+    await waitFor(() => {
+      expect(axios.post).toHaveBeenCalledWith(
+        expect.stringContaining('/api/audios/1/ideas')
+      );
+      expect(onUpdateAudio).toHaveBeenCalledWith(1, { ideas_principales: ['Idea 1', 'Idea 2', 'Idea 3'] });
+      expect(screen.getByText('Idea 1')).toBeInTheDocument();
+      expect(screen.getByText('Idea 2')).toBeInTheDocument();
+      expect(screen.getByText('Idea 3')).toBeInTheDocument();
+    });
+  });
+
+  test('debe manejar error al generar ideas principales', async () => {
+    axios.post.mockRejectedValueOnce(new Error('API error'));
+
+    render(
+      <SeleccionHistorial 
+        show={true}
+        transcripcion={mockAudio}
+        onClose={jest.fn()}
+        onDelete={jest.fn()}
+        onUpdateAudio={jest.fn()}
+      />
+    );
+
+    const ideasButton = screen.getByText('Ideas Principales');
+    fireEvent.click(ideasButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Error al generar ideas principales')).toBeInTheDocument();
+    });
+  });
+
+  test('debe generar extractos exitosamente', async () => {
+    const onUpdateAudio = jest.fn();
+    axios.post.mockResolvedValueOnce({
+      data: { data: { extractos: ['Extracto importante 1', 'Extracto clave 2'] } }
+    });
+
+    render(
+      <SeleccionHistorial 
+        show={true}
+        transcripcion={mockAudio}
+        onClose={jest.fn()}
+        onDelete={jest.fn()}
+        onUpdateAudio={onUpdateAudio}
+      />
+    );
+
+    const extractosButton = screen.getByText('Extractos');
+    fireEvent.click(extractosButton);
+
+    await waitFor(() => {
+      expect(axios.post).toHaveBeenCalledWith(
+        expect.stringContaining('/api/audios/1/extractos')
+      );
+      expect(onUpdateAudio).toHaveBeenCalledWith(1, { extractos: ['Extracto importante 1', 'Extracto clave 2'] });
+      expect(screen.getByText('"Extracto importante 1"')).toBeInTheDocument();
+      expect(screen.getByText('"Extracto clave 2"')).toBeInTheDocument();
+    });
+  });
+
+  test('debe manejar error al generar extractos', async () => {
+    axios.post.mockRejectedValueOnce(new Error('API error'));
+
+    render(
+      <SeleccionHistorial 
+        show={true}
+        transcripcion={mockAudio}
+        onClose={jest.fn()}
+        onDelete={jest.fn()}
+        onUpdateAudio={jest.fn()}
+      />
+    );
+
+    const extractosButton = screen.getByText('Extractos');
+    fireEvent.click(extractosButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Error al generar extractos')).toBeInTheDocument();
+    });
+  });
+
+  test('debe deshabilitar botones durante la generación de AI', async () => {
+    axios.post.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+
+    render(
+      <SeleccionHistorial 
+        show={true}
+        transcripcion={mockAudio}
+        onClose={jest.fn()}
+        onDelete={jest.fn()}
+        onUpdateAudio={jest.fn()}
+      />
+    );
+
+    const resumenButton = screen.getByText('Generar Resumen');
+    const ideasButton = screen.getByText('Ideas Principales');
+    const extractosButton = screen.getByText('Extractos');
+
+    fireEvent.click(resumenButton);
+
+    // Los botones deberían estar deshabilitados durante la carga
+    expect(resumenButton).toBeDisabled();
+    expect(ideasButton).toBeDisabled();
+    expect(extractosButton).toBeDisabled();
+
+    await waitFor(() => {
+      expect(resumenButton).not.toBeDisabled();
+    });
+  });
+
+  test('debe limpiar resultados de IA al cambiar transcripción', () => {
+    const { rerender } = render(
+      <SeleccionHistorial 
+        show={true}
+        transcripcion={{ ...mockAudio, resumen: 'Resumen anterior', ideas_principales: ['Idea anterior'], extractos: ['Extracto anterior'] }}
+        onClose={jest.fn()}
+        onDelete={jest.fn()}
+        onUpdateAudio={jest.fn()}
+      />
+    );
+
+    expect(screen.getByText('Resumen anterior')).toBeInTheDocument();
+
+    rerender(
+      <SeleccionHistorial 
+        show={true}
+        transcripcion={{ ...mockAudio, id: 2, resumen: '', ideas_principales: [], extractos: [] }}
+        onClose={jest.fn()}
+        onDelete={jest.fn()}
+        onUpdateAudio={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByText('Resumen anterior')).not.toBeInTheDocument();
+  });
 });

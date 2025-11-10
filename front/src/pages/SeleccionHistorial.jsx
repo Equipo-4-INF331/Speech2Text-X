@@ -6,13 +6,18 @@ import config from '../config';
 
 const BASE_URL = config.API_URL;
 
-const SeleccionHistorial = ({ show, onClose, transcripcion, onDelete }) => {
+const SeleccionHistorial = ({ show, onClose, transcripcion, onDelete, onUpdateAudio }) => {
 
   const [isEditing, setIsEditing] = useState(false);
   const [texto, setTexto] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [resumen, setResumen] = useState('');
+  const [ideas, setIdeas] = useState([]);
+  const [extractos, setExtractos] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
 
 
   const handleClose = () => {
@@ -22,11 +27,16 @@ const SeleccionHistorial = ({ show, onClose, transcripcion, onDelete }) => {
   };
 
   useEffect(() => {
+    console.log(transcripcion.audio)
     if (transcripcion?.transcription) {
       setTexto(transcripcion.transcription);
+      // Limpiar resultados de IA al cambiar transcripción
+      setResumen(transcripcion.resumen || '');
+      setIdeas(transcripcion.ideas_principales || []);
+      setExtractos(transcripcion.extractos || []);
+      setAiError('');
     }
   }, [transcripcion]); // se ejecuta cada vez que cambia transcripcion
-    if (!show) return null;
 
   const handleSave = async () => {
     setLoading(true);
@@ -65,6 +75,48 @@ const SeleccionHistorial = ({ show, onClose, transcripcion, onDelete }) => {
     }
   };
 
+  const handleGenerarResumen = async () => {
+    setAiLoading(true);
+    setAiError('');
+    try {
+      const response = await axios.post(`${BASE_URL}/api/audios/${transcripcion.id}/resumen`);
+      setResumen(response.data.data.resumen);
+      onUpdateAudio(transcripcion.id, { resumen: response.data.data.resumen });
+    } catch {
+      setAiError('Error al generar resumen');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleGenerarIdeas = async () => {
+    setAiLoading(true);
+    setAiError('');
+    try {
+      const response = await axios.post(`${BASE_URL}/api/audios/${transcripcion.id}/ideas`);
+      setIdeas(response.data.data.ideas);
+      onUpdateAudio(transcripcion.id, { ideas_principales: response.data.data.ideas });
+    } catch {
+      setAiError('Error al generar ideas principales');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleGenerarExtractos = async () => {
+    setAiLoading(true);
+    setAiError('');
+    try {
+      const response = await axios.post(`${BASE_URL}/api/audios/${transcripcion.id}/extractos`);
+      setExtractos(response.data.data.extractos);
+      onUpdateAudio(transcripcion.id, { extractos: response.data.data.extractos });
+    } catch {
+      setAiError('Error al generar extractos');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
 
   if (!show) return null;
 
@@ -73,7 +125,7 @@ const SeleccionHistorial = ({ show, onClose, transcripcion, onDelete }) => {
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <span className="modal-close" onClick={handleClose}>&times;</span>
         <h1 style={{ textAlign: "center" }}>{transcripcion.name}</h1>
-        <audio className='audio-container' controls src={transcripcion.audio}></audio>
+        <audio className='audio-container' controls src={transcripcion.url}></audio>
 
 
         <div style={{ marginTop: '16px', textAlign: 'center', position: 'relative' }}>
@@ -107,6 +159,65 @@ const SeleccionHistorial = ({ show, onClose, transcripcion, onDelete }) => {
             </>
           )}
           {error && <p style={{ color: 'red' }}>{error}</p>}
+        </div>
+
+        {/* Sección ChatIA */}
+        <div style={{ marginTop: '20px', padding: '16px', border: '1px solid #ccc', borderRadius: '8px' }}>
+          <h3 style={{ textAlign: 'center' }}>ChatIA - Análisis Inteligente</h3>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '16px' }}>
+            <button
+              onClick={handleGenerarResumen}
+              disabled={aiLoading}
+              style={{ padding: '8px 16px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+            >
+              Generar Resumen
+            </button>
+            <button
+              onClick={handleGenerarIdeas}
+              disabled={aiLoading}
+              style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+            >
+              Ideas Principales
+            </button>
+            <button
+              onClick={handleGenerarExtractos}
+              disabled={aiLoading}
+              style={{ padding: '8px 16px', backgroundColor: '#FF9800', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+            >
+              Extractos
+            </button>
+          </div>
+          {aiLoading && <p style={{ textAlign: 'center' }}>Generando análisis...</p>}
+          {aiError && <p style={{ color: 'red', textAlign: 'center' }}>{aiError}</p>}
+
+          {resumen && (
+            <div style={{ marginTop: '16px' }}>
+              <h4 style={{ color: 'white' }}>Resumen:</h4>
+              <p style={{ backgroundColor: '#555', padding: '8px', borderRadius: '4px', color: 'white', textAlign: 'justify' }}>{resumen}</p>
+            </div>
+          )}
+
+          {ideas.length > 0 && (
+            <div style={{ marginTop: '16px' }}>
+              <h4 style={{ color: 'white' }}>Ideas Principales:</h4>
+              <div style={{ backgroundColor: '#555', padding: '8px', borderRadius: '4px', color: 'white' }}>
+                {ideas.map((idea, index) => (
+                  <p key={index} style={{ textAlign: 'justify', margin: '4px 0' }}>{idea}</p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {extractos.length > 0 && (
+            <div style={{ marginTop: '16px' }}>
+              <h4 style={{ color: 'white' }}>Extractos:</h4>
+              <ul style={{ backgroundColor: '#555', padding: '8px', borderRadius: '4px', color: 'white' }}>
+                {extractos.map((extracto, index) => (
+                  <li key={index} style={{ textAlign: 'justify' }}>"{extracto}"</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         <div style={{ marginTop: '16px', textAlign: 'center' }}>

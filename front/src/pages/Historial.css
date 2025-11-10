@@ -63,6 +63,9 @@
   ;
   padding: 0;
   margin: 0;
+  white-space: nowrap;  
+  overflow: hidden;    
+  text-align: center;
 }
 
 .sidebar-item {
@@ -138,4 +141,17 @@
   content: " (doble click para editar)";
   font-size: 0.8em;
   color: gray;
+}
+
+.audio-preview,
+.audio-player {
+  width: 100%;
+  margin-top: 8px;
+  border-radius: 8px;
+  background-color: var(--color-card-bg);
+}
+.audio-container {
+  margin: 0 auto;
+  display: block; /* importante si es un elemento como <audio> o <div> */
+  text-align: center;
 }

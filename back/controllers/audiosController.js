@@ -4,6 +4,9 @@ import fs from 'fs';
 import path from 'path';
 import OpenAI from 'openai';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { generarResumen, generarIdeasPrincipales, generarExtractos } from '../services/aiService.js';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -25,7 +28,6 @@ export const historial = async(req,res) =>{
     const{username} = req.body;
     const transcripciones = await db`SELECT * FROM audios WHERE username = ${username} ORDER BY created_at DESC`
     res.status(200).json({ success: true, data: transcripciones });
-    console.log('query result:', transcripciones);
 
   } catch (error){
     res.status(500).json({ error: `Error al obtener el historial: ${error}`});
@@ -46,7 +48,7 @@ export const newAudio = async (req, res) => {
   let tmpPath; // se agrega despues de los tests
   try {
     const file = req.file;
-    const bodyName  = req.body.name;
+    const bodyName  = req.body.nombre;
     const username = req.body.username || "anonymous";
     var transcription = '';
 
@@ -77,11 +79,9 @@ export const newAudio = async (req, res) => {
       if (process.env.AWS_S3_PUBLIC === "true") {
         putParams.ACL = "public-read";
       }
-      console.log("estoy aqui \n\n\n")
       try {
         await s3.send(new PutObjectCommand(putParams));
       } catch (s3err) {
-        console.log("estoy aqui \n\n\n")
         console.error("❌ Error subiendo a S3:", s3err);
         return res.status(500).json({ error: "Error al subir a S3", details: s3err.message });
       }
@@ -110,12 +110,20 @@ export const newAudio = async (req, res) => {
         console.log(tmpPath);
 
         const response = await openai.audio.transcriptions.create({
+          model: "gpt-4o-transcribe-diarize",
           file: stream,
-          model: "gpt-4o-transcribe",
+          response_format: "diarized_json", // salida estructurada
+          chunking_strategy: "auto", // obligatorio si dura más de 30s
           // el tipo no es necesario en la API nueva, solo el stream
         });
 
-        transcriptionResult = response.text || null;
+        let diarizedText = "";
+        response.segments.forEach(seg => {
+          diarizedText += `${seg.speaker}: ${seg.text.trim()}\n`;
+        });
+
+        transcriptionResult = diarizedText || null;
+
 
         fs.unlinkSync(tmpPath);
         console.log("✅ Transcripción completada con éxito");
@@ -131,6 +139,37 @@ export const newAudio = async (req, res) => {
       VALUES (${username}, ${name}, ${audioUrl}, ${transcriptionResult})
       RETURNING *
     `;
+
+    // --- 🤖 GENERAR CONTENIDO AI AUTOMÁTICAMENTE ---
+    if (transcriptionResult) {
+      try {
+        console.log('🤖 Generando resumen, ideas principales y extractos automáticamente...');
+        const [resumenResult, ideasResult, extractosResult] = await Promise.allSettled([
+          generarResumen(transcriptionResult),
+          generarIdeasPrincipales(transcriptionResult),
+          generarExtractos(transcriptionResult)
+        ]);
+
+        const resumen = resumenResult.status === 'fulfilled' ? resumenResult.value.resumen : null;
+        const ideas_principales = ideasResult.status === 'fulfilled' ? ideasResult.value.ideas : null;
+        const extractos = extractosResult.status === 'fulfilled' ? extractosResult.value.extractos : null;
+        // Actualizar la DB con los resultados
+        await db`
+          UPDATE audios
+          SET resumen = ${resumen}, ideas_principales = ${JSON.stringify(ideas_principales)}, extractos = ${JSON.stringify(extractos)}
+          WHERE id = ${elem[0].id}
+        `;
+
+        // Actualizar el objeto retornado
+        elem[0].resumen = resumen;
+        elem[0].ideas_principales = ideas_principales;
+        elem[0].extractos = extractos;
+
+        console.log('✅ Contenido AI generado y guardado exitosamente');
+      } catch (error) {
+        console.error('❌ Error generando contenido AI:', error);
+      }
+    }
 
     res.status(201).json({ success: true, data: elem[0] });
   } catch (error) {
@@ -230,8 +269,37 @@ export const filterAudios = async (req, res) => {
         audios = await db`SELECT * FROM audios WHERE username = ${username} ORDER BY created_at DESC`;
       }
     }
+
+    // Procesar URLs y generar presigned URLs si es necesario
+    const audiosWithUrls = await Promise.all(
+      audios.map(async (audio) => {
+        let fileKey = audio.audio;
+        if (!fileKey) return { ...audio, url: null };
+
+        try {
+          // Si viene una URL completa, extraemos la parte del archivo
+          if (fileKey.startsWith("https://")) {
+            const parts = fileKey.split(".com/");
+            if (parts.length > 1) fileKey = parts[1]; // ej: audios/archivo.mp3
+          }
+
+          const command = new GetObjectCommand({
+            Bucket: process.env.AWS_S3_BUCKET,
+            Key: fileKey,
+          });
+
+          // Firmamos SIEMPRE
+          const signedUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
+          return { ...audio, url: signedUrl };
+        } catch (err) {
+          console.error("Error al generar URL firmada:", err);
+          return { ...audio, url: null };
+        }
+      })
+    );
+
     res.set('Cache-Control', 'no-cache');
-    res.status(200).json({ success: true, data: audios });
+    res.status(200).json({ success: true, data: audiosWithUrls  });
   } catch (error) {
     console.error('Error en filterAudios:', error.stack || error);
     res.status(500).json({ error: 'Error al filtrar audios' });
