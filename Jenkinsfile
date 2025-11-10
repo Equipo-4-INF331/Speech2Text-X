@@ -21,7 +21,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git branch: 'hotfix/v1.1.0',
+                git branch: 'main',
                     credentialsId: 'github-jenkins',
                     url: 'https://github.com/Equipo-4-INF331/Speech2Text-X.git'
             }
