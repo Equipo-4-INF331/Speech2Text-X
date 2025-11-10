@@ -73,7 +73,7 @@ pipeline {
             steps {
                 dir('front') {
                     sh 'npm run build'
-                    sh 'rsync - a front/dist/ /home/ubuntu/Speech2Text-X/front/dist/'
+                    sh 'rsync -a front/dist/ /home/ubuntu/Speech2Text-X/front/dist/'
                 }
             }
         }
