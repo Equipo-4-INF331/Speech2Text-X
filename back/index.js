@@ -1,7 +1,3 @@
-import express from "express";
-import helmet from "helmet";
-import morgan from "morgan";
-import cors from "cors";
 import dotenv from "dotenv";
 
 if (process.env.NODE_ENV === 'production') {
@@ -12,6 +8,10 @@ if (process.env.NODE_ENV === 'production') {
   console.log("📦 Cargando .env local");
 }
 
+import express from "express";
+import helmet from "helmet";
+import morgan from "morgan";
+import cors from "cors";
 import audiosRoutes from "./routes/audiosRoutes.js";
 import { db } from "./database.js";
 import path from "path";
