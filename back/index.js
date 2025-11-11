@@ -1,17 +1,5 @@
 import dotenv from "dotenv";
 
-
-
-import express from "express";
-import helmet from "helmet";
-import morgan from "morgan";
-import cors from "cors";
-import audiosRoutes from "./routes/audiosRoutes.js";
-import { db } from "./database.js";
-import path from "path";
-import { fileURLToPath } from "url";
-
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -23,6 +11,18 @@ if (process.env.NODE_ENV === 'production') {
   dotenv.config({ path: path.resolve(__dirname, '.env') });
   console.log("📦 Cargando .env local");
 }
+
+import express from "express";
+import helmet from "helmet";
+import morgan from "morgan";
+import cors from "cors";
+import audiosRoutes from "./routes/audiosRoutes.js";
+import { db } from "./database.js";
+import path from "path";
+import { fileURLToPath } from "url";
+
+
+
 
 
 console.log("🔑 OPENAI_API_KEY:", process.env.OPENAI_API_KEY ? "✅ cargada" : "❌ no encontrada");
