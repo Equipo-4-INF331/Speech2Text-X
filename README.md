@@ -51,8 +51,8 @@ en siguiente enlace corresponde a la wiki, donde se encuentra la documentación 
 
 # Videos
 
-[Link al video](https://youtu.be/18uwsg-9-bQ)
-
+[Entrega 1](https://youtu.be/18uwsg-9-bQ)
+[Entrega 2](https://youtu.be/Z4fzJ7tYvgE)
 ## Contribuciones
 
 
