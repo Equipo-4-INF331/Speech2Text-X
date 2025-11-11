@@ -157,7 +157,7 @@ export const newAudio = async (req, res) => {
         // Actualizar la DB con los resultados
         await db`
           UPDATE audios
-          SET resumen = ${resumen}, ideas_principales = ${JSON.stringify(ideas_principales)}, extractos = ${JSON.stringify(extractos)}
+          SET resumen = ${resumen}, ideas_principales = ${(ideas_principales)}, extractos = ${(extractos)}
           WHERE id = ${elem[0].id}
         `;
 
