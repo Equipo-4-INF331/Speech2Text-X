@@ -8,13 +8,15 @@ router.get("/", (req, res) => {
   res.json({ ok: true, message: "Router de audios operativo" });
 });
 router.get('/filter', filterAudios);
+router.get('/historial', historial);
+
 router.get('/:id', getAudio);
-router.post('/historial', historial);
 router.delete('/:id', deleteAudio);
-router.put('/updateTranscription', updateTranscription);
-router.post('/', upload.single('file'), newAudio);
 router.post('/:id/resumen', generarResumen);
 router.post('/:id/ideas', generarIdeasPrincipales);
 router.post('/:id/extractos', generarExtractos);
+
+router.put('/updateTranscription', updateTranscription);
+router.post('/', upload.single('file'), newAudio);
 
 export default router;

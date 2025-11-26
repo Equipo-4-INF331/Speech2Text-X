@@ -30,7 +30,6 @@ const [loading, setLoading] = useState(false);
       setLoading(true);
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('username', 'alberto');
       formData.append('nombre', name || file.name);
 
       await axios.post(`${BASE_URL}/api/audios`, formData);

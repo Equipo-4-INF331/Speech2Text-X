@@ -5,7 +5,6 @@ import SeleccionHistorial from './SeleccionHistorial';
 import config from '../config';
 
 const BASE_URL = config.API_URL;
-const USERNAME = 'alberto';
 
 const Historial = () => {
   const [transcripciones, setTranscripciones] = useState([]);
@@ -22,8 +21,13 @@ const Historial = () => {
     setLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams({ username: USERNAME, ...filters });
-      const response = await axios.get(`${BASE_URL}/api/audios/filter?${params}`);
+      const token = localStorage.getItem('token');
+
+      const response = await axios.get(`${BASE_URL}/api/audios/filter`, {
+        params: filters, 
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
       if (response.status === 304) {
         return;
       }

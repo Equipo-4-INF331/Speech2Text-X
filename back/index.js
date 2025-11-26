@@ -19,11 +19,9 @@ import helmet from "helmet";
 import morgan from "morgan";
 import cors from "cors";
 import audiosRoutes from "./routes/audiosRoutes.js";
+import authRoutes from "./routes/authRoutes.js"
+import { authMiddleware } from "./middleware/authMiddleware.js";
 import { db } from "./database.js";
-
-
-
-
 
 console.log("🔑 OPENAI_API_KEY:", process.env.OPENAI_API_KEY ? "✅ cargada" : "❌ no encontrada");
 
@@ -47,7 +45,8 @@ app.use(helmet({
   },
   hsts: false
 }));
-app.use("/api/audios", audiosRoutes);
+app.use("/api/audios", authMiddleware, audiosRoutes);
+app.use("/api/auth", authRoutes);
 
 const frontendPath = path.join(
   __dirname,
@@ -91,6 +90,14 @@ async function initDB() {
     await db`ALTER TABLE audios ADD COLUMN IF NOT EXISTS resumen TEXT`;
     await db`ALTER TABLE audios ADD COLUMN IF NOT EXISTS ideas_principales JSON`;
     await db`ALTER TABLE audios ADD COLUMN IF NOT EXISTS extractos JSON`;
+    await db`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(32) UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
     console.log("Base de datos iniciada correctamente")
   } catch (error) {
     console.error("Error iniciando base de datos", error);

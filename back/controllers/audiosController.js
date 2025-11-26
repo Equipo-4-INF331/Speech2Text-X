@@ -25,7 +25,7 @@ export { upload };
 
 export const historial = async(req,res) =>{
   try{
-    const{username} = req.body;
+    const username = req.user.username;
     const transcripciones = await db`SELECT * FROM audios WHERE username = ${username} ORDER BY created_at DESC`
     res.status(200).json({ success: true, data: transcripciones });
 
@@ -49,7 +49,7 @@ export const newAudio = async (req, res) => {
   try {
     const file = req.file;
     const bodyName  = req.body.nombre;
-    const username = req.body.username || "anonymous";
+    const username = req.user.username;
     var transcription = '';
 
     if (!file && !bodyName) {
@@ -215,7 +215,8 @@ export const updateTranscription = async (req, res) => {
 
 export const filterAudios = async (req, res) => {
   try {
-    const { name, description, dateFrom, dateTo, username } = req.query;
+    const username = req.user.username;
+    const { name, description, dateFrom, dateTo } = req.query;
     
     // Construir condiciones WHERE
     let conditions = [];
@@ -251,7 +252,7 @@ export const filterAudios = async (req, res) => {
       // Ejecutar con todas las condiciones
       if (username && !name && !description && !dateFrom && !dateTo) {
         audios = await db`SELECT * FROM audios WHERE username = ${username} ORDER BY created_at DESC`;
-      } else if (username && name && !description && !dateFrom && !dateTo) {
+      } else if (useaudiosRoutesrname && name && !description && !dateFrom && !dateTo) {
         audios = await db`SELECT * FROM audios WHERE username = ${username} AND name ILIKE ${'%' + name + '%'} ORDER BY created_at DESC`;
       } else if (username && description && !name && !dateFrom && !dateTo) {
         audios = await db`SELECT * FROM audios WHERE username = ${username} AND transcription ILIKE ${'%' + description + '%'} ORDER BY created_at DESC`;
