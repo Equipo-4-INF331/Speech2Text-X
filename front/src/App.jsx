@@ -2,6 +2,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { AudiosProvider } from './context/AudiosContext';
 
 import MainPage from './pages/MainPage';
 import Historial from './pages/Historial';
@@ -26,22 +27,18 @@ const Layout = ({ children }) => {
   const { user, logout } = useAuth();
 
   return (
-    <div>
-      <header style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 16px', borderBottom: '1px solid #ddd' }}>
-        <div>
-          <Link to="/">Speech2Text-X</Link>{" | "}
-          <Link to="/historial">Historial</Link>
+    <div className="">
+      {/* Bloque de sesión flotando arriba a la derecha */}
+      {user && (
+        <div className="absolute top-3 right-4 flex items-center gap-1 z-10">
+          <span>Usuario: {user.username} |</span>
+          <button onClick={logout}>Cerrar sesión</button>
         </div>
-        <div>
-          {user && (
-            <>
-              <span style={{ marginRight: 8 }}>👋 {user.username}</span>
-              <button onClick={logout}>Cerrar sesión</button>
-            </>
-          )}
-        </div>
-      </header>
-      <main>{children}</main>
+      )}
+
+      <main className="">
+        {children}
+      </main>
     </div>
   );
 };
@@ -67,9 +64,7 @@ const AppRoutes = () => (
       path="/historial"
       element={
         <ProtectedRoute>
-          <Layout>
-            <Historial />
-          </Layout>
+          <Historial />
         </ProtectedRoute>
       }
     />
@@ -81,9 +76,11 @@ const AppRoutes = () => (
 
 const App = () => (
   <AuthProvider>
-    <Router>
-      <AppRoutes />
-    </Router>
+    <AudiosProvider>
+      <Router>
+        <AppRoutes />
+      </Router>
+    </AudiosProvider>
   </AuthProvider>
 );
 

@@ -3,49 +3,25 @@ import axios from 'axios';
 import './Historial.css';
 import SeleccionHistorial from './SeleccionHistorial';
 import config from '../config';
+import { useAudios } from '../context/AudiosContext';
+
 
 const BASE_URL = config.API_URL;
 
 const Historial = () => {
-  const [transcripciones, setTranscripciones] = useState([]);
+  const {
+    transcripciones,
+    fetchHistorial,
+    loading,
+    error,
+  } = useAudios();
+
   const [selectedTranscripcion, setSelectedTranscripcion] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [nameFilter, setNameFilter] = useState('');
   const [descriptionFilter, setDescriptionFilter] = useState('');
   const [dateFromFilter, setDateFromFilter] = useState('');
   const [dateToFilter, setDateToFilter] = useState('');
   const [filterError, setFilterError] = useState('');
-
-  const fetchHistorial = async (filters = {}) => {
-    setLoading(true);
-    setError('');
-    try {
-      const token = localStorage.getItem('token');
-
-      const response = await axios.get(`${BASE_URL}/api/audios/filter`, {
-        params: filters, 
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-
-      if (response.status === 304) {
-        return;
-      }
-      if (Array.isArray(response.data.data)) {
-        setTranscripciones(response.data.data);
-      } else if (response.data.error) {
-        setError(`Error del servidor: ${response.data.error}`);
-      }
-    } catch {
-      setError('Error al obtener el historial');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateAudioInList = (id, updatedFields) => {
-    setTranscripciones(prev => prev.map(t => t.id === id ? { ...t, ...updatedFields } : t));
-  };
 
   useEffect(() => {
     fetchHistorial();
@@ -152,7 +128,7 @@ const Historial = () => {
           onClose={() => setSelectedTranscripcion(null)}
           transcripcion={selectedTranscripcion || {}}
           onDelete={() => fetchHistorial()}
-          onUpdateAudio={updateAudioInList}
+          onUpdateAudio={() => fetchHistorial()}
         />
       </main>
     </div>

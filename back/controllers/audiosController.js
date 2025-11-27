@@ -252,7 +252,7 @@ export const filterAudios = async (req, res) => {
       // Ejecutar con todas las condiciones
       if (username && !name && !description && !dateFrom && !dateTo) {
         audios = await db`SELECT * FROM audios WHERE username = ${username} ORDER BY created_at DESC`;
-      } else if (useaudiosRoutesrname && name && !description && !dateFrom && !dateTo) {
+      } else if (username && name && !description && !dateFrom && !dateTo) {
         audios = await db`SELECT * FROM audios WHERE username = ${username} AND name ILIKE ${'%' + name + '%'} ORDER BY created_at DESC`;
       } else if (username && description && !name && !dateFrom && !dateTo) {
         audios = await db`SELECT * FROM audios WHERE username = ${username} AND transcription ILIKE ${'%' + description + '%'} ORDER BY created_at DESC`;

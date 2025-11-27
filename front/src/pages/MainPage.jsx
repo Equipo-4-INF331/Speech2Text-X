@@ -2,13 +2,15 @@ import React, { useRef, useState } from 'react';
 import axios from 'axios';
 import Historial from './Historial.jsx';
 import config from '../config';
+import { useAudios } from '../context/AudiosContext';
 import './MainPage.css';
 
 const BASE_URL = config.API_URL;
 
 const MainPage = () => {
+  const { fetchHistorial } = useAudios();
+  
   const audioRef = useRef();
-  const historialRef = useRef();
   const [recording, setRecording] = useState();
   const [showUploadCard, setShowUploadCard] = useState(false);
   const [fileNameInput, setFileNameInput] = useState('');
@@ -32,7 +34,18 @@ const [loading, setLoading] = useState(false);
       formData.append('file', file);
       formData.append('nombre', name || file.name);
 
-      await axios.post(`${BASE_URL}/api/audios`, formData);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setUploadError('No hay sesión activa. Vuelve a iniciar sesión.');
+        return;
+      }
+
+      await axios.post(`${BASE_URL}/api/audios`, formData, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
       setSuccessMessage(`✅ El audio "${name}" se subió correctamente.`);
       setTimeout(() => setSuccessMessage(''), 5000);
@@ -40,9 +53,8 @@ const [loading, setLoading] = useState(false);
       setShowUploadCard(false);
       setRecording(null);
       setFileNameInput('');
-      audioRef.current.value = '';
 
-      historialRef.current?.refresh();
+      await fetchHistorial();
     } catch (err) {
       console.error('Error subiendo archivo:', err);
       setError('Error al subir el audio');
@@ -53,7 +65,7 @@ const [loading, setLoading] = useState(false);
 
   return (
     <div className="main-container">
-      <Historial ref={historialRef} />
+      <Historial />
 
       <div className="main-content">
         {successMessage && (
