@@ -28,10 +28,14 @@ export const generarIdeasPrincipales = async (req, res) => {
       return res.status(404).json({ error: 'Transcripción no encontrada' });
     }
     const transcription = audio[0].transcription;
+    console.log('Audio found:', audio[0]);
 
     const result = await aiIdeas(transcription);
+    console.log('Result ideas:', result.ideas);
     // Guardar en DB
+    console.log('Guardando ideas_principales:', JSON.stringify(result.ideas));
     await db`UPDATE audios SET ideas_principales = ${JSON.stringify(result.ideas)} WHERE id = ${id}`;
+    console.log('Ideas guardadas en DB para id:', id);
     res.status(200).json({ success: true, data: result });
   } catch (error) {
     console.error('Error generando ideas:', error);

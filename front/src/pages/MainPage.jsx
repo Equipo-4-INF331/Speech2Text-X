@@ -1,10 +1,14 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import axios from 'axios';
 import Historial from './Historial.jsx';
 import config from '../config';
 import './MainPage.css';
+import { ALLOWED_EMAILS } from '../../../shared/allowedEmails.js';
 
 const BASE_URL = config.API_URL;
+
+// Hardcoded suggestions (client-side). Ajusta según necesites.
+const SUGGESTED_EMAILS = ALLOWED_EMAILS;
 
 const MainPage = () => {
   const audioRef = useRef();
@@ -12,9 +16,41 @@ const MainPage = () => {
   const [recording, setRecording] = useState();
   const [showUploadCard, setShowUploadCard] = useState(false);
   const [fileNameInput, setFileNameInput] = useState('');
+  const [uploadVisibility, setUploadVisibility] = useState('owner');
   const [successMessage, setSuccessMessage] = useState('');
   const [error, setError] = useState('');
-const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [selectedEmails, setSelectedEmails] = useState([]);
+  const [inputText, setInputText] = useState('');
+
+  const suggestions = useMemo(() => {
+    const q = inputText.trim().toLowerCase();
+    if (!q) return SUGGESTED_EMAILS.filter(e => !selectedEmails.includes(e));
+    return SUGGESTED_EMAILS.filter(e => e.toLowerCase().includes(q) && !selectedEmails.includes(e));
+  }, [inputText, selectedEmails]);
+
+  const addEmail = (email) => {
+    if (!email) return;
+    const e = email.trim();
+    if (!e || selectedEmails.includes(e) || !ALLOWED_EMAILS.includes(e)) return;
+    setSelectedEmails(prev => [...prev, e]);
+    setInputText('');
+  };
+
+  const removeEmail = (email) => setSelectedEmails(prev => prev.filter(e => e !== email));
+
+  const handleInputKey = (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const email = inputText.replace(',', '').trim();
+      if (ALLOWED_EMAILS.includes(email)) {
+        addEmail(email);
+      }
+    } else if (e.key === 'Backspace' && inputText === '' && selectedEmails.length > 0) {
+      // remove last
+      setSelectedEmails(prev => prev.slice(0, -1));
+    }
+  };
 
 
   const onChangeFile = (e) => {
@@ -23,32 +59,38 @@ const [loading, setLoading] = useState(false);
     setRecording(file);
     setFileNameInput(file.name || '');
     setShowUploadCard(true);
+    setSelectedEmails([]);
+    setInputText('');
   };
 
-  const uploadFile = async (file, name) => {
+  const uploadFile = async (file, name, visibility = 'owner') => {
     try {
       setLoading(true);
       const formData = new FormData();
       formData.append('file', file);
       formData.append('username', 'alberto');
-      formData.append('nombre', name || file.name);
+      formData.append('nombre', name || (file && file.name) || 'audio');
+      formData.append('visibility', visibility);
+      if (visibility === 'private' && selectedEmails.length > 0) formData.append('viewers', selectedEmails.join(','));
 
       await axios.post(`${BASE_URL}/api/audios`, formData);
 
-      setSuccessMessage(`✅ El audio "${name}" se subió correctamente.`);
+      setSuccessMessage(`✅ El audio "${name || file?.name || 'audio'}" se subió correctamente.`);
       setTimeout(() => setSuccessMessage(''), 5000);
 
       setShowUploadCard(false);
       setRecording(null);
       setFileNameInput('');
-      audioRef.current.value = '';
+      setSelectedEmails([]);
+      setInputText('');
+      if (audioRef.current) audioRef.current.value = '';
 
       historialRef.current?.refresh();
     } catch (err) {
       console.error('Error subiendo archivo:', err);
       setError('Error al subir el audio');
-    } finally{
-      setLoading(false); 
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -94,12 +136,54 @@ const [loading, setLoading] = useState(false);
               className="upload-input"
             />
 
+            <div style={{ marginTop: 8 }}>
+              <label>Visibilidad:</label>
+              <div>
+                <label style={{ marginRight: 8 }}>
+                  <input type="radio" name="uploadVis" checked={uploadVisibility === 'owner'} onChange={() => setUploadVisibility('owner')} /> Solo yo
+                </label>
+                <label style={{ marginRight: 8 }}>
+                  <input type="radio" name="uploadVis" checked={uploadVisibility === 'private'} onChange={() => setUploadVisibility('private')} /> Privado
+                </label>
+                <label>
+                  <input type="radio" name="uploadVis" checked={uploadVisibility === 'public'} onChange={() => setUploadVisibility('public')} /> Público
+                </label>
+              </div>
+              {uploadVisibility === 'private' && (
+                <div style={{ marginTop: 8 }}>
+                  <label>Invitados</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+                    {selectedEmails.map(e => (
+                      <div key={e} style={{ background: '#555', padding: '6px 8px', borderRadius: 16, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 13, color: 'white' }}>{e}</span>
+                        <button onClick={() => removeEmail(e)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'white' }}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                  <input
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={handleInputKey}
+                    placeholder="Añadir email..."
+                    style={{ width: '100%', padding: '8px' }}
+                  />
+                  {inputText && suggestions.length > 0 && (
+                    <div style={{ border: '1px solid #ddd', marginTop: 6, borderRadius: 4, maxHeight: 120, overflow: 'auto' }}>
+                      {suggestions.slice(0, 5).map(s => (
+                        <div key={s} onClick={() => addEmail(s)} style={{ padding: 8, cursor: 'pointer' }}>{s}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* 🎧 Reproductor local (antes de subir) */}
             <audio controls src={URL.createObjectURL(recording)} className="audio-preview" />
 
             <div className="upload-actions">
               <button
-                onClick={() => uploadFile(recording, fileNameInput)}
+                onClick={() => uploadFile(recording, fileNameInput, uploadVisibility)}
                 className="btn primary"
                 disabled={loading}
               >
@@ -110,6 +194,8 @@ const [loading, setLoading] = useState(false);
                   setShowUploadCard(false);
                   setRecording(null);
                   setFileNameInput('');
+                  setSelectedEmails([]);
+                  setInputText('');
                 }}
                 className="btn secondary"
               >

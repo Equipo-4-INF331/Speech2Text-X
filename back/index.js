@@ -38,6 +38,20 @@ async function initDB() {
     await db`ALTER TABLE audios ADD COLUMN IF NOT EXISTS resumen TEXT`;
     await db`ALTER TABLE audios ADD COLUMN IF NOT EXISTS ideas_principales JSON`;
     await db`ALTER TABLE audios ADD COLUMN IF NOT EXISTS extractos JSON`;
+    await db`ALTER TABLE audios ADD COLUMN IF NOT EXISTS share_token UUID UNIQUE`;
+    await db`ALTER TABLE audios ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false`;
+    await db`ALTER TABLE audios ADD COLUMN IF NOT EXISTS visibility VARCHAR(16) DEFAULT 'owner'`;
+
+    await db`
+      CREATE TABLE IF NOT EXISTS audio_viewers (
+        id SERIAL PRIMARY KEY,
+        audio_id INTEGER REFERENCES audios(id) ON DELETE CASCADE,
+        email VARCHAR(255) NOT NULL,
+        viewer_token UUID UNIQUE,
+        verified BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
     console.log("Base de datos iniciada correctamente")
   } catch (error) {
     console.error("Error iniciando base de datos", error);
