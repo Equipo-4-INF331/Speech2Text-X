@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import './LoginRegister.css';
 import config from '../config';
 
 const BASE_URL = config.API_URL;
@@ -35,38 +36,57 @@ const Login = () => {
 
   return (
     <div className="auth-page">
-      <h2>Iniciar sesión</h2>
-      <form onSubmit={handleSubmit} className="auth-form">
-        <label>
-          Usuario
-          <input
-            type="text"
-            value={username}
-            onChange={e => setUsername(e.target.value)}
-            required
-          />
-        </label>
+      <h1 className="main-title-reg">Speech2Text X</h1>
+      <div className='auth-main'>
+        <div className={`auth-card ${error ? 'auth-card--error' : ''}`}>
+          <h2 className="auth-title">Iniciar sesión</h2>
 
-        <label>
-          Contraseña
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-          />
-        </label>
+          <form onSubmit={handleSubmit} className="auth-form">
+            <label className="auth-label">
+              Usuario
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                required
+                className={`auth-input ${error ? 'auth-input--error' : ''}`}
+              />
+            </label>
 
-        {error && <p style={{ color: 'red' }}>{error}</p>}
+            <label className="auth-label">
+              Contraseña
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                className={`auth-input ${error ? 'auth-input--error' : ''}`}
+              />
+            </label>
 
-        <button type="submit" disabled={loading}>
-          {loading ? 'Ingresando...' : 'Entrar'}
-        </button>
-      </form>
+            {error && (
+              <p className="auth-error-text">
+                {error}
+              </p>
+            )}
 
-      <p>
-        ¿No tienes cuenta? <Link to="/register">Regístrate aquí</Link>
-      </p>
+            <button
+              type="submit"
+              disabled={loading}
+              className="auth-button"
+            >
+              {loading ? 'Ingresando...' : 'Entrar'}
+            </button>
+          </form>
+
+          <p className="auth-register-text">
+            ¿No tienes cuenta?{' '}
+            <Link to="/register" className="auth-link">
+              Regístrate aquí
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,0 +1,189 @@
+
+/* ============================
+   Layout general de la página de login
+   ============================ */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  background-color: var(--color-bg);
+  padding: 32px 16px 16px;
+}
+
+.auth-main {
+  display: flex;
+  align-items: center;           /* centra verticalmente el card */
+  justify-content: center;       /* centra horizontalmente el card */
+  width: 100%;
+  margin: 32px;
+}
+
+/* Tarjeta del formulario */
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  padding: 32px;
+  border: 1px solid #e2e8f0;
+  box-sizing: border-box;
+}
+
+/* Borde rojo cuando hay error global */
+.auth-card--error {
+  border-color: #ef4444;
+}
+
+/* Título */
+.auth-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: center;
+  margin: 0 0 24px 0;
+}
+
+.main-title-reg {
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--color-card-text);
+}
+
+/* Formulario */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Label + texto */
+.auth-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+/* Inputs */
+.auth-input {
+  margin-top: 4px;
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  color: var(--color-text);
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Estado focus */
+.auth-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 80%, black);
+}
+
+/* Input en estado de error */
+.auth-input--error {
+  border-color: var(--color-error);
+}
+
+/* Texto de error debajo del form */
+.auth-error-text {
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: var(--color-error);
+}
+
+/* Botón de enviar */
+.auth-button {
+  margin-top: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  color: #ffffff;
+  background-color: var(--color-accent);
+  transition: background-color 0.15s ease, transform 0.05s ease,
+    box-shadow 0.15s ease;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+}
+
+/* Hover / active / disabled */
+.auth-button:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--color-accent) 80%, black);
+}
+
+.auth-button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+}
+
+.auth-button:disabled {
+  cursor: not-allowed;
+  background-color: rgba(37, 99, 235, 0.5);
+  box-shadow: none;
+}
+
+/* Texto de registro */
+.auth-register-text {
+  margin-top: 16px;
+  font-size: 14px;
+  color: #64748b;
+  text-align: center;
+}
+
+/* Link dentro del texto */
+.auth-link {
+  color: var(--color-accent);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+/* ============================
+   Botón de upload redondo (tu otro ejemplo)
+   ============================ */
+
+.upload-button {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: var(--color-accent); /* azul definido arriba */
+  color: #fff;
+  font-size: 48px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease,
+    box-shadow 0.2s ease;
+  margin: 16px 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.4);
+}
+
+.upload-button:hover {
+  background-color: color-mix(in srgb, var(--color-accent) 80%, black);
+}
+
+.upload-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+}

@@ -1,6 +1,7 @@
 // src/pages/RegisterPage.jsx
 import React, { useState } from 'react';
 import axios from 'axios';
+import './LoginRegister.css';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import config from '../config';
@@ -37,38 +38,57 @@ const Register = () => {
 
   return (
     <div className="auth-page">
-      <h2>Registro</h2>
-      <form onSubmit={handleSubmit} className="auth-form">
-        <label>
-          Usuario
-          <input
-            type="username"
-            value={username}
-            onChange={e => setUsername(e.target.value)}
-            required
-          />
-        </label>
+      <h1 className="main-title-reg">Speech2Text X</h1>
+      <div className='auth-main'>
+        <div className={`auth-card ${error ? 'auth-card--error' : ''}`}>
+          <h2 className="auth-title">Registro</h2>
 
-        <label>
-          Contraseña
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-          />
-        </label>
+          <form onSubmit={handleSubmit} className="auth-form">
+            <label className="auth-label">
+              Usuario
+              <input
+                type="text"             // mejor "text" que "username"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                required
+                className={`auth-input ${error ? 'auth-input--error' : ''}`}
+              />
+            </label>
 
-        {error && <p style={{ color: 'red' }}>{error}</p>}
+            <label className="auth-label">
+              Contraseña
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                className={`auth-input ${error ? 'auth-input--error' : ''}`}
+              />
+            </label>
 
-        <button type="submit" disabled={loading}>
-          {loading ? 'Creando cuenta...' : 'Registrarse'}
-        </button>
-      </form>
+            {error && (
+              <p className="auth-error-text">
+                {error}
+              </p>
+            )}
 
-      <p>
-        ¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link>
-      </p>
+            <button
+              type="submit"
+              disabled={loading}
+              className="auth-button"
+            >
+              {loading ? 'Creando cuenta...' : 'Registrarse'}
+            </button>
+          </form>
+
+          <p className="auth-register-text">
+            ¿Ya tienes cuenta?{' '}
+            <Link to="/login" className="auth-link">
+              Inicia sesión
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 };
