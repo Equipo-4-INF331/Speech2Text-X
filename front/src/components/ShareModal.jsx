@@ -1,13 +1,9 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import config from '../config';
 import { v4 as uuidv4 } from 'uuid';
-import { ALLOWED_EMAILS } from '../../../shared/allowedEmails.js';
 
 const BASE_URL = config.API_URL;
-
-// Hardcoded suggestions (client-side). Ajusta según necesites.
-const SUGGESTED_EMAILS = ALLOWED_EMAILS;
 
 const ShareModal = ({ audioId, initialToken, initialPublic, onClose, visible }) => {
   const [visibility, setVisibility] = useState(initialPublic ? 'public' : 'owner');
@@ -52,16 +48,11 @@ const ShareModal = ({ audioId, initialToken, initialPublic, onClose, visible }) 
   const origin = window.__PUBLIC_ORIGIN__ || window.location.origin;
   const link = token ? `${origin}/share/${token}` : '';
 
-  const suggestions = useMemo(() => {
-    const q = inputText.trim().toLowerCase();
-    if (!q) return SUGGESTED_EMAILS.filter(e => !selectedEmails.includes(e));
-    return SUGGESTED_EMAILS.filter(e => e.toLowerCase().includes(q) && !selectedEmails.includes(e));
-  }, [inputText, selectedEmails]);
-
   const addEmail = (email) => {
     if (!email) return;
     const e = email.trim();
-    if (!e || selectedEmails.includes(e) || !ALLOWED_EMAILS.includes(e)) return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!e || selectedEmails.includes(e) || !emailRegex.test(e)) return;
     setSelectedEmails(prev => [...prev, e]);
     setInputText('');
     if (inputRef.current) inputRef.current.focus();
@@ -73,9 +64,7 @@ const ShareModal = ({ audioId, initialToken, initialPublic, onClose, visible }) 
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
       const email = inputText.replace(',', '').trim();
-      if (ALLOWED_EMAILS.includes(email)) {
-        addEmail(email);
-      }
+      addEmail(email);
     } else if (e.key === 'Backspace' && inputText === '' && selectedEmails.length > 0) {
       // remove last
       setSelectedEmails(prev => prev.slice(0, -1));
@@ -98,7 +87,15 @@ const ShareModal = ({ audioId, initialToken, initialPublic, onClose, visible }) 
 
       // 2) if private and has selected emails, invite them
       if (visibility === 'private' && selectedEmails.length > 0) {
-        await axios.post(`${BASE_URL}/api/audios/${audioId}/invite`, { emails: selectedEmails });
+        const inviteResp = await axios.post(`${BASE_URL}/api/audios/${audioId}/invite`, { emails: selectedEmails });
+        const { results } = inviteResp.data;
+        const failed = results.filter(r => !r.ok);
+        if (failed.length > 0) {
+          const failedMsgs = failed.map(f => `${f.email}: ${f.reason}`).join('; ');
+          setError(`Errores enviando invitaciones: ${failedMsgs}`);
+          setStatus('error');
+          return; // no continuar
+        }
       }
 
       setStatus('saved');
@@ -173,13 +170,6 @@ const ShareModal = ({ audioId, initialToken, initialPublic, onClose, visible }) 
                   placeholder="Añadir email..."
                   style={{ width: '100%', padding: '8px' }}
                 />
-                {inputText && suggestions.length > 0 && (
-                  <div style={{ border: '1px solid #ddd', marginTop: 6, borderRadius: 4, maxHeight: 120, overflow: 'auto' }}>
-                    {suggestions.map(s => (
-                      <div key={s} onClick={() => addEmail(s)} style={{ padding: 8, cursor: 'pointer' }}>{s}</div>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           </div>

@@ -1,6 +1,5 @@
 // src/pages/RegisterPage.jsx
 import React, { useState } from 'react';
-import axios from 'axios';
 import './LoginRegister.css';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';

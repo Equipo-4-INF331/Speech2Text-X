@@ -42,7 +42,7 @@
 .auth-title {
   font-size: 24px;
   font-weight: 600;
-  color: var(--color-text);
+  color: #000000;
   text-align: center;
   margin: 0 0 24px 0;
 }
@@ -51,7 +51,7 @@
   font-size: 2rem;
   font-weight: 700;
   text-align: center;
-  color: var(--color-card-text);
+  color: #ffffff;
 }
 
 /* Formulario */
@@ -66,7 +66,7 @@
   display: block;
   font-size: 14px;
   font-weight: 500;
-  color: var(--color-text);
+  color: #000000;
 }
 
 /* Inputs */
@@ -79,7 +79,7 @@
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   background-color: #ffffff;
-  color: var(--color-text);
+  color: #000000;
   box-sizing: border-box;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -142,7 +142,7 @@
 .auth-register-text {
   margin-top: 16px;
   font-size: 14px;
-  color: #64748b;
+  color: #000000;
   text-align: center;
 }
 
