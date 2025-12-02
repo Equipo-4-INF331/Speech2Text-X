@@ -17,11 +17,6 @@ jest.mock('uuid', () => ({
   v4: jest.fn(() => 'mock-uuid-token')
 }));
 
-// Mock ALLOWED_EMAILS
-jest.mock('../../../shared/allowedEmails.js', () => ({
-  ALLOWED_EMAILS: ['test@example.com', 'user@example.com', 'new@example.com']
-}));
-
 // Mock window.location
 // delete window.location;
 // Object.defineProperty(window, 'location', {
@@ -89,21 +84,6 @@ describe('ShareModal', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
     
     expect(screen.getByText('new@example.com')).toBeInTheDocument();
-  });
-
-  it('debería agregar email desde sugerencias', () => {
-    render(<ShareModal {...defaultProps} />);
-    
-    const privateRadio = screen.getByRole('radio', { name: 'Privado (invitar por email)' });
-    fireEvent.click(privateRadio);
-    
-    const input = screen.getByPlaceholderText('Añadir email...');
-    fireEvent.change(input, { target: { value: 'test' } });
-    
-    const suggestion = screen.getByText('test@example.com');
-    fireEvent.click(suggestion);
-    
-    expect(screen.getByText('test@example.com')).toBeInTheDocument();
   });
 
   it('debería remover email al hacer click en ×', () => {

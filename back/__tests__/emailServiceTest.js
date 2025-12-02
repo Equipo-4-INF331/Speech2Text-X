@@ -22,7 +22,7 @@ describe('Email Service', () => {
     });
 
     it('debería retornar false para email no permitido', async () => {
-      const result = await isAllowedEmail('notallowed@example.com');
+      const result = await isAllowedEmail('notallowed');
       expect(result).toBe(false);
     });
 
@@ -76,7 +76,7 @@ describe('Email Service', () => {
     });
 
     it('debería retornar error para email no permitido', async () => {
-      const result = await sendInvitationEmail('notallowed@example.com', 'http://example.com', 'Audio Test');
+      const result = await sendInvitationEmail('notallowed', 'http://example.com', 'Audio Test');
 
       expect(result).toEqual({ success: false, reason: 'email not allowed' });
       expect(mockTransporter.sendMail).not.toHaveBeenCalled();

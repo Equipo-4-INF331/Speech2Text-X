@@ -1,16 +1,12 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState } from 'react';
 import axios from 'axios';
 import Historial from './Historial.jsx';
 import config from '../config';
 import { useAudios } from '../context/AudiosContext';
 import './MainPage.css';
-import { ALLOWED_EMAILS } from '../../../shared/allowedEmails.js';
 import { useAuth } from '../context/AuthContext';
 
 const BASE_URL = config.API_URL;
-
-// Hardcoded suggestions (client-side). Ajusta según necesites.
-const SUGGESTED_EMAILS = ALLOWED_EMAILS;
 
 const MainPage = () => {
   const { fetchHistorial } = useAudios();
@@ -26,16 +22,11 @@ const MainPage = () => {
   const [selectedEmails, setSelectedEmails] = useState([]);
   const [inputText, setInputText] = useState('');
 
-  const suggestions = useMemo(() => {
-    const q = inputText.trim().toLowerCase();
-    if (!q) return SUGGESTED_EMAILS.filter(e => !selectedEmails.includes(e));
-    return SUGGESTED_EMAILS.filter(e => e.toLowerCase().includes(q) && !selectedEmails.includes(e));
-  }, [inputText, selectedEmails]);
-
   const addEmail = (email) => {
     if (!email) return;
     const e = email.trim();
-    if (!e || selectedEmails.includes(e) || !ALLOWED_EMAILS.includes(e)) return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!e || selectedEmails.includes(e) || !emailRegex.test(e)) return;
     setSelectedEmails(prev => [...prev, e]);
     setInputText('');
   };
@@ -46,9 +37,7 @@ const MainPage = () => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
       const email = inputText.replace(',', '').trim();
-      if (ALLOWED_EMAILS.includes(email)) {
-        addEmail(email);
-      }
+      addEmail(email);
     } else if (e.key === 'Backspace' && inputText === '' && selectedEmails.length > 0) {
       // remove last
       setSelectedEmails(prev => prev.slice(0, -1));
@@ -185,13 +174,6 @@ const MainPage = () => {
                     placeholder="Añadir email..."
                     style={{ width: '100%', padding: '8px' }}
                   />
-                  {inputText && suggestions.length > 0 && (
-                    <div style={{ border: '1px solid #ddd', marginTop: 6, borderRadius: 4, maxHeight: 120, overflow: 'auto' }}>
-                      {suggestions.slice(0, 5).map(s => (
-                        <div key={s} onClick={() => addEmail(s)} style={{ padding: 8, cursor: 'pointer' }}>{s}</div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
             </div>

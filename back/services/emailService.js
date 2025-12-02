@@ -1,7 +1,5 @@
 import nodemailer from 'nodemailer';
-import { ALLOWED_EMAILS } from '../../shared/allowedEmails.js';
 
-// Crear el transporter una vez
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -11,8 +9,9 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function isAllowedEmail(email) {
-  if (!email) return false;
-  return ALLOWED_EMAILS.includes(String(email).trim());
+  if (!email || typeof email !== 'string') return false;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
 }
 
 export async function sendEmail(mailOptions) {
