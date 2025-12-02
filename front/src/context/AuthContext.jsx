@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 import config from '../config';
+import  {jwtDecode } from 'jwt-decode';
 
 const AuthContext = createContext(null);
 
@@ -10,15 +11,33 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Cargar desde localStorage al iniciar
-  useEffect(() => {
+   useEffect(() => {
     const savedToken = localStorage.getItem('token');
     const savedUser  = localStorage.getItem('user');
 
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-      axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
+    if (savedToken) {
+      try {
+        const decoded = jwtDecode(savedToken);
+        const now = Date.now(); // ms
+        const expMs = decoded.exp * 1000; // exp viene en segundos
+
+        if (expMs <= now) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        } else {
+          // Token aún válido
+          setToken(savedToken);
+          if (savedUser) {
+            setUser(JSON.parse(savedUser));
+          }
+          axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
+        }
+      } catch (e) {
+        // Token corrupto / no válido → limpiar
+        console.error('Error decodificando token en front:', e);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
     }
 
     setLoading(false);

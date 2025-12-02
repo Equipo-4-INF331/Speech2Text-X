@@ -93,7 +93,20 @@ async function initDB() {
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(32) UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
+        password_hash TEXT NOT NULL
+      )
+    `;
+    await db`ALTER TABLE audios ADD COLUMN IF NOT EXISTS share_token UUID UNIQUE`;
+    await db`ALTER TABLE audios ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false`;
+    await db`ALTER TABLE audios ADD COLUMN IF NOT EXISTS visibility VARCHAR(16) DEFAULT 'owner'`;
+
+    await db`
+      CREATE TABLE IF NOT EXISTS audio_viewers (
+        id SERIAL PRIMARY KEY,
+        audio_id INTEGER REFERENCES audios(id) ON DELETE CASCADE,
+        email VARCHAR(255) NOT NULL,
+        viewer_token UUID UNIQUE,
+        verified BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;

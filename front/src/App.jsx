@@ -8,6 +8,7 @@ import MainPage from './pages/MainPage';
 import Historial from './pages/Historial';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
+import ShareView from './pages/ShareView';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -48,6 +49,7 @@ const AppRoutes = () => (
     {/* Rutas públicas */}
     <Route path="/login" element={<LoginPage />} />
     <Route path="/register" element={<RegisterPage />} />
+    <Route path="/share/:token" element={<ShareView />} />
 
     {/* Rutas protegidas */}
     <Route

@@ -5,61 +5,82 @@ process.env.AWS_REGION = 'us-east-1';
 process.env.AWS_S3_PUBLIC = 'fake';
 process.env.OPENAI_API_KEY = 'fake';
 
-jest.mock('openai', () => {
-  const MockedOpenAI = class {
-    constructor() {}
-    audio = {
-      transcriptions: {
-        create: jest.fn().mockResolvedValue({ text: 'transcripción-ok' }),
-      },
-    };
-  };
-  return { __esModule: true, default: MockedOpenAI };
-});
+jest.mock('@aws-sdk/s3-request-presigner', () => ({
+  getSignedUrl: jest.fn().mockResolvedValue('https://signed-url.com'),
+}));
 
-jest.mock('fs', () => {
-  const real = jest.requireActual('fs');
-  return {
-    ...real,
-    mkdirSync: jest.fn(),
-    writeFileSync: jest.fn(),
-    createReadStream: jest.fn(() => 'stream'),
-    unlinkSync: jest.fn(),
-    existsSync: jest.fn(() => false),
-  };
-});
+jest.mock('@smithy/shared-ini-file-loader');
+jest.mock('../services/emailService.js', () => ({
+  isAllowedEmail: jest.fn(() => true),
+  sendInvitationEmail: jest.fn(() => Promise.resolve({ success: true })),
+  sendShareEmail: jest.fn(() => Promise.resolve({ success: true, info: 'sent' })),
+}));
+
+jest.mock('fs', () => ({
+  mkdirSync: jest.fn(),
+  writeFileSync: jest.fn(),
+  createReadStream: jest.fn(() => 'stream'),
+  unlinkSync: jest.fn(),
+  existsSync: jest.fn(() => false),
+  promises: {
+    readFile: jest.fn().mockResolvedValue(''),
+  },
+}));
 
 jest.mock('@aws-sdk/client-s3', () => {
-  const send = jest.fn().mockResolvedValue({});
-  const S3Client = jest.fn(() => ({ send }));
-  const PutObjectCommand = jest.fn(function PutObjectCommand() {});
-  const GetObjectCommand = jest.fn(function GetObjectCommand() {});
-  return { S3Client, PutObjectCommand, GetObjectCommand };
+  return {
+    S3Client: jest.fn().mockImplementation(() => ({
+      send: jest.fn(() => Promise.resolve('uploaded')),
+    })),
+    PutObjectCommand: jest.fn((params) => ({ ...params })),
+    GetObjectCommand: jest.fn((params) => ({ ...params })),
+  };
 });
 
-jest.mock('@aws-sdk/s3-request-presigner', () => ({
-  getSignedUrl: jest.fn().mockResolvedValue('https://signed-url.example/file.mp3'),
-}));
+jest.mock('openai', () => {
+  return jest.fn().mockImplementation(() => ({
+    audio: {
+      transcriptions: {
+        create: jest.fn(() => Promise.resolve({ text: 'Transcripción mock' })),
+      },
+    },
+  }));
+});
 
-// Un SOLO mock de la DB (tagged template compatible)
+// Esto se creo para mockear cuando usamos filtros ya que jest no lo reconoce a lo anterior como db,  Eso es una tagged template function call, y db no se invoca como una función normal (db()), sino como
 jest.mock('../database.js', () => ({
-  db: jest.fn(),
+  db: jest.fn(async (...args) => {
+    const query = args[0]?.join ? args[0].join(' ') : args[0];
+    if (query && query.includes('FROM audios')) {
+      return [{
+        id: 1,
+        username: 'pepe',
+        name: 'El que se fue a milipilla',
+        audio: 'link',
+        transcription: 'El que se fue a milipilla perdio su silla',
+        created_at: new Date('2025-10-17T20:00:00Z')
+      }];
+    }
+    return [];
+  }),
 }));
 
-// --- Ahora sí: importa lo que testeas (después de los mocks) ---
-import { historial, getAudio, newAudio, deleteAudio, updateTranscription, filterAudios, s3 } from '../controllers/audiosController.js';
+import { historial, getAudio, newAudio, deleteAudio, updateTranscription, filterAudios, s3, setVisibility, getByShareToken, sendShareEmail, inviteViewers, verifyViewer, streamAudio } from '../controllers/audiosController.js';
 import { db } from '../database.js';
 
 // --- Tests ---
 describe('Audio Controller', () => {
   let res;
   beforeEach(() => {
+    jest.clearAllMocks();
+    db.mockReset();
     res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
       set: jest.fn(),
+      setHeader: jest.fn(),
+      send: jest.fn(),
     };
-    jest.clearAllMocks();
   });
 
   // ---------- historial ----------
@@ -209,23 +230,230 @@ describe('Audio Controller', () => {
 
   // ---------- filterAudios ----------
   it('debería filtrar audios por username', async () => {
-    db.mockResolvedValue([{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'),  }]);
-    const req = { query:{ name: "El que se fue a milipilla",description:"El que se fue a milipilla perdio su silla" ,dateFrom: new Date('2025-10-16T20:00:00Z'),dateTo: new Date('2025-10-17T20:00:00Z')}, user: {username: 'pepe'} };
+    db.mockImplementation(async () => [
+      {
+        id: 1,
+        username: 'pepe',
+        name: 'El que se fue a milipilla',
+        audio: 'link',
+        transcription: 'El que se fue a milipilla perdio su silla',
+        created_at: new Date('2025-10-17T20:00:00Z'),
+      },
+    ]);
+  const req = { query:{ name: "El que se fue a milipilla",description:"El que se fue a milipilla perdio su silla" ,dateFrom: new Date('2025-10-16T20:00:00Z'),dateTo: new Date('2025-10-17T20:00:00Z')}, user: {username: 'pepe'} };
     await filterAudios(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-cache');
-    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.example/file.mp3',}]});
+    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.com',}]});
   });
 
-    it('debería filtrar audios por todos los filtros', async () => {
-    db.mockResolvedValue([{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T10:00:00Z') }, { id: 2, username: 'pepe', name:'El que se fue a milipilla',audio:'linasdfak',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z') }]);
-    const req = { query:{ name: "El que se fue a milipilla",description:"El que se fue a milipilla perdio su silla" ,dateFrom: new Date('2025-10-16T20:00:00Z'),dateTo: new Date('2025-10-17T20:00:00Z')}, user: {username: 'pepe'} };
+  it('debería filtrar audios por todos los filtros', async () => {
+  db.mockImplementation(async () => [
+    {
+      id: 1,
+      username: 'pepe',
+      name: 'El que se fue a milipilla',
+      audio: 'link',
+      transcription: 'El que se fue a milipilla perdio su silla',
+      created_at: new Date('2025-10-17T20:00:00Z'),
+    },
+  ]);
+
+  const req = {
+    query: {
+      name: 'El que se fue a milipilla',
+      description: 'El que se fue a milipilla perdio su silla',
+      dateFrom: new Date('2025-10-16T20:00:00Z'),
+      dateTo: new Date('2025-10-17T20:00:00Z'),
+    },
+    user: { username: 'pepe' },
+  };
+
+  await filterAudios(req, res);
+  console.log(res.json);
+  expect(res.status).toHaveBeenCalledWith(200);
+  expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-cache');
+  expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.com' }]});
+});
+
+  it('debería filtrar audios solo por name', async () => {
+    db.mockImplementation(async () => [
+      {
+        id: 1,
+        username: 'pepe',
+        name: 'El que se fue a milipilla',
+        audio: 'link',
+        transcription: 'El que se fue a milipilla perdio su silla',
+        created_at: new Date('2025-10-17T20:00:00Z'),
+      },
+    ]);
+    const req = { query:{ name: "El que se fue a milipilla" }, user: {username: 'pepe'} };
     await filterAudios(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-cache');
-    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T10:00:00Z'), url: 'https://signed-url.example/file.mp3'}, 
-      {id: 2, username: 'pepe', name:'El que se fue a milipilla',audio:'linasdfak',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.example/file.mp3'
-    }]});
+    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.com' }]});
+  });
+
+  it('debería filtrar audios solo por description', async () => {
+    db.mockImplementation(async () => [
+      {
+        id: 1,
+        username: 'pepe',
+        name: 'El que se fue a milipilla',
+        audio: 'link',
+        transcription: 'El que se fue a milipilla perdio su silla',
+        created_at: new Date('2025-10-17T20:00:00Z'),
+      },
+    ]);
+    const req = { query:{ description: "El que se fue a milipilla perdio su silla" }, user: {username: 'pepe'} };
+    await filterAudios(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-cache');
+    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.com' }]});
+  });
+
+  it('debería filtrar audios solo por dateFrom', async () => {
+    db.mockImplementation(async () => [
+      {
+        id: 1,
+        username: 'pepe',
+        name: 'El que se fue a milipilla',
+        audio: 'link',
+        transcription: 'El que se fue a milipilla perdio su silla',
+        created_at: new Date('2025-10-17T20:00:00Z'),
+      },
+    ]);
+    const req = { query:{ dateFrom: new Date('2025-10-16T20:00:00Z') }, user: {username: 'pepe'} };
+    await filterAudios(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-cache');
+    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.com' }]});
+  });
+
+  it('debería filtrar audios solo por dateTo', async () => {
+    db.mockImplementation(async () => [
+      {
+        id: 1,
+        username: 'pepe',
+        name: 'El que se fue a milipilla',
+        audio: 'link',
+        transcription: 'El que se fue a milipilla perdio su silla',
+        created_at: new Date('2025-10-17T20:00:00Z'),
+      },
+    ]);
+    const req = { query:{ dateTo: new Date('2025-10-17T20:00:00Z') }, user: {username: 'pepe'} };
+    await filterAudios(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-cache');
+    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.com' }]});
+  });
+
+  it('debería filtrar audios por name y description', async () => {
+    db.mockImplementation(async () => [
+      {
+        id: 1,
+        username: 'pepe',
+        name: 'El que se fue a milipilla',
+        audio: 'link',
+        transcription: 'El que se fue a milipilla perdio su silla',
+        created_at: new Date('2025-10-17T20:00:00Z'),
+      },
+    ]);
+    const req = { query:{ name: "El que se fue a milipilla", description: "El que se fue a milipilla perdio su silla" }, user: {username: 'pepe'} };
+    await filterAudios(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-cache');
+    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.com' }]});
+  });
+
+  it('debería filtrar audios por name y dateFrom', async () => {
+    db.mockImplementation(async () => [
+      {
+        id: 1,
+        username: 'pepe',
+        name: 'El que se fue a milipilla',
+        audio: 'link',
+        transcription: 'El que se fue a milipilla perdio su silla',
+        created_at: new Date('2025-10-17T20:00:00Z'),
+      },
+    ]);
+    const req = { query:{ name: "El que se fue a milipilla", dateFrom: new Date('2025-10-16T20:00:00Z') }, user: {username: 'pepe'} };
+    await filterAudios(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-cache');
+    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.com' }]});
+  });
+
+  it('debería filtrar audios por name y dateTo', async () => {
+    db.mockImplementation(async () => [
+      {
+        id: 1,
+        username: 'pepe',
+        name: 'El que se fue a milipilla',
+        audio: 'link',
+        transcription: 'El que se fue a milipilla perdio su silla',
+        created_at: new Date('2025-10-17T20:00:00Z'),
+      },
+    ]);
+    const req = { query:{ name: "El que se fue a milipilla", dateTo: new Date('2025-10-17T20:00:00Z') }, user: {username: 'pepe'} };
+    await filterAudios(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-cache');
+    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.com' }]});
+  });
+
+  it('debería filtrar audios por description y dateFrom', async () => {
+    db.mockImplementation(async () => [
+      {
+        id: 1,
+        username: 'pepe',
+        name: 'El que se fue a milipilla',
+        audio: 'link',
+        transcription: 'El que se fue a milipilla perdio su silla',
+        created_at: new Date('2025-10-17T20:00:00Z'),
+      },
+    ]);
+    const req = { query:{ description: "El que se fue a milipilla perdio su silla", dateFrom: new Date('2025-10-16T20:00:00Z') }, user: {username: 'pepe'} };
+    await filterAudios(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-cache');
+    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.com' }]});
+  });
+
+  it('debería filtrar audios por description y dateTo', async () => {
+    db.mockImplementation(async () => [
+      {
+        id: 1,
+        username: 'pepe',
+        name: 'El que se fue a milipilla',
+        audio: 'link',
+        transcription: 'El que se fue a milipilla perdio su silla',
+        created_at: new Date('2025-10-17T20:00:00Z'),
+      },
+    ]);
+    const req = { query:{ description: "El que se fue a milipilla perdio su silla", dateTo: new Date('2025-10-17T20:00:00Z') }, user: {username: 'pepe'} };
+    await filterAudios(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-cache');
+    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.com' }]});
+  });
+
+  it('debería filtrar audios por dateFrom y dateTo', async () => {
+    db.mockImplementation(async () => [
+      {
+        id: 1,
+        username: 'pepe',
+        name: 'El que se fue a milipilla',
+        audio: 'link',
+        transcription: 'El que se fue a milipilla perdio su silla',
+        created_at: new Date('2025-10-17T20:00:00Z'),
+      },
+    ]);
+    const req = { query:{ dateFrom: new Date('2025-10-16T20:00:00Z'), dateTo: new Date('2025-10-17T20:00:00Z') }, user: {username: 'pepe'} };
+    await filterAudios(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-cache');
+    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.com' }]});
   });
   
 
@@ -235,9 +463,220 @@ describe('Audio Controller', () => {
    
   it('debería manejar error en filterAudios', async () => {
     db.mockRejectedValueOnce(new Error('DB error'));
-    const req = { query: {}};
+    const req = { query: {} };
     await filterAudios(req, res);
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({ error: "Error al filtrar audios" });
+  });
+
+  // ---------- setVisibility ----------
+  it('debería cambiar visibilidad a public y generar token', async () => {
+    db.mockResolvedValueOnce([{ id: 1, share_token: null }]);
+    db.mockResolvedValueOnce([{ id: 1, visibility: 'public', is_public: true, share_token: 'new-token' }]);
+    const req = { params: { id: 1 }, body: { visibility: 'public' } };
+    await setVisibility(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ success: true, data: { token: expect.any(String), link: expect.stringContaining('/share/'), visibility: 'public' } });
+  });
+
+  it('debería cambiar visibilidad a private y generar token', async () => {
+    db.mockResolvedValueOnce([{ id: 1, share_token: null }]);
+    db.mockResolvedValueOnce([{ id: 1, visibility: 'private', is_public: false, share_token: 'new-token' }]);
+    const req = { params: { id: 1 }, body: { visibility: 'private' } };
+    await setVisibility(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ success: true, data: { token: expect.any(String), link: expect.stringContaining('/share/'), visibility: 'private' } });
+  });
+
+  it('debería cambiar visibilidad a owner sin token', async () => {
+    db.mockResolvedValueOnce([{ id: 1, share_token: 'old-token' }]);
+    db.mockResolvedValueOnce([{ id: 1, visibility: 'owner', is_public: false, share_token: null }]);
+    const req = { params: { id: 1 }, body: { visibility: 'owner' } };
+    await setVisibility(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ success: true, data: { token: null, link: null, visibility: 'owner' } });
+  });
+
+  it('debería devolver 404 si audio no encontrado en setVisibility', async () => {
+    db.mockResolvedValueOnce([]);
+    const req = { params: { id: 1 }, body: { visibility: 'public' } };
+    await setVisibility(req, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Audio no encontrado' });
+  });
+
+  it('debería manejar error en setVisibility', async () => {
+    db.mockRejectedValueOnce(new Error('DB error'));
+    const req = { params: { id: 1 }, body: { visibility: 'public' } };
+    await setVisibility(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Error actualizando visibilidad' });
+  });
+
+  // ---------- getByShareToken ----------
+  it('debería devolver audio público por token', async () => {
+    db.mockResolvedValueOnce([{ id: 1, audio: 'file.mp3', visibility: 'public', share_token: 'token' }]);
+    const req = { params: { token: 'token' }, query: {} };
+    await getByShareToken(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ success: true, data: { id: 1, audio: 'file.mp3', visibility: 'public', share_token: 'token', url: 'https://signed-url.com' } });
+  });
+
+  it('debería devolver audio privado con viewer token válido', async () => {
+    db.mockResolvedValueOnce([{ id: 1, audio: 'file.mp3', visibility: 'private', share_token: 'token' }]);
+    db.mockResolvedValueOnce([{ id: 1, email: 'test@example.com', verified: false }]);
+    const req = { params: { token: 'token' }, query: { viewerToken: 'viewer-token' } };
+    await getByShareToken(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ success: true, data: { id: 1, audio: 'file.mp3', visibility: 'private', share_token: 'token', url: 'https://signed-url.com' }, viewer: { email: 'test@example.com', verified: true } });
+  });
+
+  it('debería devolver 404 para audio owner por token', async () => {
+    db.mockResolvedValueOnce([{ id: 1, visibility: 'owner', share_token: 'token' }]);
+    const req = { params: { token: 'token' }, query: {} };
+    await getByShareToken(req, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Link no válido' });
+  });
+
+  it('debería devolver 404 para token inválido', async () => {
+    db.mockResolvedValueOnce([]);
+    const req = { params: { token: 'invalid' }, query: {} };
+    await getByShareToken(req, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Link no válido' });
+  });
+
+  it('debería manejar error en getByShareToken', async () => {
+    db.mockRejectedValueOnce(new Error('DB error'));
+    const req = { params: { token: 'token' }, query: {} };
+    await getByShareToken(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Error buscando recurso' });
+  });
+
+  // ---------- sendShareEmail ----------
+  it('debería enviar email de share exitosamente', async () => {
+    const req = { body: { emailDestino: 'test@example.com', link: 'http://example.com/share/token', titulo: 'Test Audio' } };
+    await sendShareEmail(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ success: true, info: 'sent' });
+  });
+
+  it('debería devolver 400 si falta email o link en sendShareEmail', async () => {
+    const req = { body: {} };
+    await sendShareEmail(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'emailDestino y link son requeridos' });
+  });
+
+  it('debería manejar error en sendShareEmail', async () => {
+    // Mock the email service to return failure
+    const emailService = require('../services/emailService.js');
+    emailService.sendShareEmail.mockResolvedValueOnce({ success: false });
+    const req = { body: { emailDestino: 'test@example.com', link: 'http://example.com' } };
+    await sendShareEmail(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Error enviando email' });
+  });
+
+  // ---------- inviteViewers ----------
+  it('debería invitar viewers exitosamente', async () => {
+    db.mockResolvedValueOnce([{ id: 1, share_token: null }]);
+    db.mockResolvedValueOnce(); // insert
+    db.mockResolvedValueOnce(); // update
+    const req = { params: { id: 1 }, body: { emails: ['test@example.com'] } };
+    await inviteViewers(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ success: true, results: [{ email: 'test@example.com', ok: true, reason: null }] });
+  });
+
+  it('debería devolver 404 si audio no encontrado en inviteViewers', async () => {
+    db.mockResolvedValueOnce([]);
+    const req = { params: { id: 1 }, body: { emails: ['test@example.com'] } };
+    await inviteViewers(req, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Audio no encontrado' });
+  });
+
+  it('debería manejar error en inviteViewers', async () => {
+    db.mockRejectedValueOnce(new Error('DB error'));
+    const req = { params: { id: 1 }, body: { emails: ['test@example.com'] } };
+    await inviteViewers(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Error invitando viewers' });
+  });
+
+  // ---------- verifyViewer ----------
+  it('debería verificar viewer exitosamente', async () => {
+    db.mockResolvedValueOnce([{ id: 1, email: 'test@example.com', verified: false, audio_id: 1 }]);
+    db.mockResolvedValueOnce([{ id: 1 }]);
+    db.mockResolvedValueOnce([
+      {
+        id: 1,
+        username: 'pepe',
+        name: 'El que se fue a milipilla',
+        audio: 'link',
+        transcription: 'El que se fue a milipilla perdio su silla',
+        created_at: new Date('2025-10-17T20:00:00Z'),
+      },
+    ]);
+    const req = { params: { viewerToken: 'viewer-token' } };
+    await verifyViewer(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ success: true, data: { audio: { id: 1, username: 'pepe', name: 'El que se fue a milipilla', audio: 'link', transcription: 'El que se fue a milipilla perdio su silla', created_at: new Date('2025-10-17T20:00:00Z') }, viewer: { email: 'test@example.com', verified: true } } });
+  });
+
+  it('debería devolver 404 para token inválido en verifyViewer', async () => {
+    db.mockResolvedValueOnce([]);
+    const req = { params: { viewerToken: 'invalid' } };
+    await verifyViewer(req, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Token inválido' });
+  });
+
+  it('debería manejar error en verifyViewer', async () => {
+    db.mockRejectedValueOnce(new Error('DB error'));
+    const req = { params: { viewerToken: 'token' } };
+    await verifyViewer(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Error verificando viewer' });
+  });
+
+  // ---------- streamAudio ----------
+  it('debería transmitir audio desde S3', async () => {
+    db.mockResolvedValueOnce([{ id: 1, audio: 'audios/file.mp3' }]);
+    const mockS3Resp = { ContentType: 'audio/mpeg', Body: { pipe: jest.fn() } };
+    s3.send.mockResolvedValueOnce(mockS3Resp);
+    const req = { params: { id: 1 } };
+    await streamAudio(req, res);
+    expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'audio/mpeg');
+    expect(mockS3Resp.Body.pipe).toHaveBeenCalledWith(res);
+  });
+
+  it('debería devolver 404 si audio no encontrado en streamAudio', async () => {
+    db.mockResolvedValueOnce([{ id: 1, audio: null }]);
+    const req = { params: { id: 1 } };
+    await streamAudio(req, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Archivo de audio no disponible' });
+  });
+
+  it('debería manejar error en streamAudio', async () => {
+    db.mockRejectedValueOnce(new Error('DB error'));
+    const req = { params: { id: 1 } };
+    await streamAudio(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Error transmitiendo audio' });
+  });
+
+  it('debería manejar body como ArrayBuffer en streamAudio', async () => {
+    db.mockResolvedValueOnce([{ id: 1, audio: 'audios/file.mp3' }]);
+    const mockS3Resp = { ContentType: 'audio/mpeg', Body: new ArrayBuffer(8) };
+    s3.send.mockResolvedValueOnce(mockS3Resp);
+    const req = { params: { id: 1 } };
+    await streamAudio(req, res);
+    expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'audio/mpeg');
+    expect(res.send).toHaveBeenCalledWith(Buffer.from(new ArrayBuffer(8)));
   });
 });

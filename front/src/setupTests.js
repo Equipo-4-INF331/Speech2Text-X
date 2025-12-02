@@ -25,3 +25,5 @@ Object.defineProperty(global.HTMLMediaElement.prototype, 'pause', {
   configurable: true,
   value: jest.fn(),
 });
+// Mock para URL.createObjectURL
+global.URL.createObjectURL = jest.fn(() => 'mock-url');

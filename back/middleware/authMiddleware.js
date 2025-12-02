@@ -2,6 +2,9 @@
 import jwt from "jsonwebtoken";
 
 export function authMiddleware(req, res, next) {
+  if (req.baseUrl === '/api/audios' && req.path.startsWith('/share')) {
+    return next();
+  }
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {

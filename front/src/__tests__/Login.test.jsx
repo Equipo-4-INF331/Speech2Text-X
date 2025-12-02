@@ -1,4 +1,4 @@
-// front/__tests__/Login.test.jsx
+
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Login from '../pages/Login';

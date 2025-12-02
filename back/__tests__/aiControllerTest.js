@@ -46,6 +46,16 @@ describe('AI Controller', () => {
       expect(res.json).toHaveBeenCalledWith({ error: 'Transcripción no encontrada' });
     });
 
+    it('debería manejar transcripción vacía', async () => {
+      const mockAudio = [{ transcription: null }];
+      db.mockResolvedValue(mockAudio);
+
+      await generarResumen(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Transcripción no encontrada' });
+    });
+
     it('debería manejar error al generar resumen', async () => {
       const mockAudio = [{ transcription: 'Texto de prueba' }];
       db.mockResolvedValue(mockAudio);
@@ -85,6 +95,25 @@ describe('AI Controller', () => {
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({ error: 'Error al generar ideas principales' });
     });
+
+    it('debería manejar transcripción no encontrada', async () => {
+      db.mockResolvedValue([]);
+
+      await generarIdeasPrincipales(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Transcripción no encontrada' });
+    });
+
+    it('debería manejar transcripción vacía', async () => {
+      const mockAudio = [{ transcription: null }];
+      db.mockResolvedValue(mockAudio);
+
+      await generarIdeasPrincipales(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Transcripción no encontrada' });
+    });
   });
 
   describe('generarExtractos', () => {
@@ -112,6 +141,25 @@ describe('AI Controller', () => {
 
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({ error: 'Error al generar extractos' });
+    });
+
+    it('debería manejar transcripción no encontrada', async () => {
+      db.mockResolvedValue([]);
+
+      await generarExtractos(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Transcripción no encontrada' });
+    });
+
+    it('debería manejar transcripción vacía', async () => {
+      const mockAudio = [{ transcription: null }];
+      db.mockResolvedValue(mockAudio);
+
+      await generarExtractos(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Transcripción no encontrada' });
     });
   });
 });

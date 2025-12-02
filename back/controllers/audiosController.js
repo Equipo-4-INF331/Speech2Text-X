@@ -1,4 +1,5 @@
 import { db } from '../database.js';
+import { v4 as uuidv4 } from 'uuid';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
@@ -7,6 +8,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { generarResumen, generarIdeasPrincipales, generarExtractos } from '../services/aiService.js';
+import { isAllowedEmail, sendInvitationEmail, sendShareEmail as sendShareEmailService } from '../services/emailService.js';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -132,11 +134,35 @@ export const newAudio = async (req, res) => {
     console.log("🗃️ Insertando en BD:", { username, name, audioUrl, transcriptionResult });
 
     // --- 🗃️ GUARDAR EN BASE DE DATOS ---
-    const elem = await db`
-      INSERT INTO audios (username, name, audio, transcription)
-      VALUES (${username}, ${name}, ${audioUrl}, ${transcriptionResult})
-      RETURNING *
-    `;
+      // Permitir control de visibilidad desde el upload (visibility: 'owner'|'private'|'public')
+      const visibility = req.body.visibility || 'owner';
+      const isPublicFlag = visibility === 'public';
+      const generatedToken = (visibility === 'public' || visibility === 'private') ? uuidv4() : null;
+
+      const elem = await db`
+        INSERT INTO audios (username, name, audio, transcription, is_public, share_token, visibility)
+        VALUES (${username}, ${name}, ${audioUrl}, ${transcriptionResult}, ${isPublicFlag}, ${generatedToken}, ${visibility})
+        RETURNING *
+      `;
+
+      // Si la visibilidad es 'private' y vienen viewers, crear registros y enviar invitaciones
+      if (visibility === 'private' && req.body.viewers) {
+        const viewersCsv = typeof req.body.viewers === 'string' ? req.body.viewers : (Array.isArray(req.body.viewers) ? req.body.viewers.join(',') : '');
+        const emails = viewersCsv.split(',').map(e => e.trim()).filter(Boolean);
+          if (emails.length > 0) {
+          const origin = process.env.PUBLIC_ORIGIN || `http://localhost:${process.env.PORT || 3000}`;
+
+          for (const email of emails) {
+            const viewerToken = uuidv4();
+            await db`INSERT INTO audio_viewers (audio_id, email, viewer_token, verified) VALUES (${elem[0].id}, ${email}, ${viewerToken}, false)`;
+            const link = `${origin}/share/${generatedToken}?viewerToken=${viewerToken}`;
+            const result = await sendInvitationEmail(email, link, name);
+            if (!result.success) {
+              console.error('Error enviando invitación durante upload', result.reason || result.error);
+            }
+          }
+        }
+      }
 
     // --- 🤖 GENERAR CONTENIDO AI AUTOMÁTICusername: 'user1'AMENTE ---
     if (transcriptionResult) {
@@ -209,6 +235,228 @@ export const updateTranscription = async (req, res) => {
     res.status(500).json({ error: 'Error al actualizar la transcripción' });
   }
 }
+
+export const setVisibility = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { visibility, token: providedToken } = req.body; // 'owner' | 'private' | 'public', optional token
+
+    const rows = await db`SELECT * FROM audios WHERE id = ${id} LIMIT 1`;
+    if (!rows || rows.length === 0) return res.status(404).json({ error: 'Audio no encontrado' });
+    const audio = rows[0];
+
+    let token = providedToken || audio.share_token;
+    if (visibility === 'owner') {
+      token = null;
+    } else if ((visibility === 'public' || visibility === 'private') && !token) {
+      token = uuidv4();
+    }
+
+    const is_public_flag = visibility === 'public';
+    await db`
+      UPDATE audios
+      SET visibility = ${visibility}, is_public = ${is_public_flag}, share_token = ${token}
+      WHERE id = ${id}
+      RETURNING *
+    `;
+
+    const origin = process.env.PUBLIC_ORIGIN || `http://localhost:${process.env.PORT || 3000}`;
+    const link = token ? `${origin}/share/${token}` : null;
+
+    return res.status(200).json({ success: true, data: { token, link, visibility } });
+  } catch (err) {
+    console.error('Error en setVisibility:', err.stack || err);
+    return res.status(500).json({ error: 'Error actualizando visibilidad' });
+  }
+};
+
+export const getByShareToken = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const viewerToken = req.query.viewerToken || req.query.tokenViewer || null;
+
+    const rows = await db`SELECT * FROM audios WHERE share_token = ${token} LIMIT 1`;
+    if (!rows || rows.length === 0) return res.status(404).json({ error: 'Link no válido' });
+    const audio = rows[0];
+
+    try {
+      let fileKey = audio.audio;
+      let url = null;
+      if (fileKey) {
+        const bucket = process.env.AWS_S3_BUCKET || process.env.AWS_S3_BUCKET_NAME;
+        if (bucket) {
+          if (fileKey.includes('.amazonaws.com/')) {
+            const parts = fileKey.split('.com/');
+            if (parts.length > 1) fileKey = parts[1];
+          }
+          try {
+            const command = new GetObjectCommand({ Bucket: bucket, Key: fileKey });
+            url = await getSignedUrl(s3, command, { expiresIn: 3600 });
+          } catch (presignErr) {
+            console.warn('getByShareToken: presign failed', presignErr && presignErr.message ? presignErr.message : presignErr);
+            url = null;
+          }
+        }
+      }
+      if (url) audio.url = url;
+    } catch (attachErr) {
+      console.warn('getByShareToken: attach url error', attachErr && attachErr.message ? attachErr.message : attachErr);
+    }    if (audio.visibility === 'public') return res.status(200).json({ success: true, data: audio });
+
+    if (audio.visibility === 'owner') {
+      return res.status(404).json({ error: 'Link no válido' });
+    }
+
+    if (audio.visibility === 'private') {
+      if (!viewerToken) return res.status(404).json({ error: 'Link privado: token de viewer requerido' });
+      const vrows = await db`SELECT * FROM audio_viewers WHERE viewer_token = ${viewerToken} AND audio_id = ${audio.id} LIMIT 1`;
+      if (!vrows || vrows.length === 0) return res.status(404).json({ error: 'Token de viewer inválido' });
+      if (!vrows[0].verified) {
+        await db`UPDATE audio_viewers SET verified = true WHERE id = ${vrows[0].id}`;
+      }
+      return res.status(200).json({ success: true, data: audio, viewer: { email: vrows[0].email, verified: true } });
+    }
+
+    return res.status(404).json({ error: 'Link no válido' });
+  } catch (err) {
+    console.error('Error en getByShareToken:', err.stack || err);
+    return res.status(500).json({ error: 'Error buscando recurso' });
+  }
+};
+
+export const sendShareEmail = async (req, res) => {
+  try {
+    const { emailDestino, link, titulo } = req.body;
+    if (!emailDestino || !link) return res.status(400).json({ error: 'emailDestino y link son requeridos' });
+
+    const result = await sendShareEmailService(emailDestino, link, titulo);
+    if (result.success) {
+      return res.status(200).json({ success: true, info: result.info });
+    } else {
+      return res.status(500).json({ error: 'Error enviando email' });
+    }
+  } catch (err) {
+    console.error('Error en sendShareEmail:', err.stack || err);
+    return res.status(500).json({ error: 'Error enviando email' });
+  }
+};
+
+export const inviteViewers = async (req, res) => {
+  try {
+    const { id } = req.params; 
+    const { emails } = req.body; 
+    if (!emails || !Array.isArray(emails) || emails.length === 0) return res.status(400).json({ error: 'emails es requerido' });
+
+    const rows = await db`SELECT * FROM audios WHERE id = ${id} LIMIT 1`;
+    if (!rows || rows.length === 0) return res.status(404).json({ error: 'Audio no encontrado' });
+    const audio = rows[0];
+
+    const origin = process.env.PUBLIC_ORIGIN || `http://localhost:${process.env.PORT || 3000}`;
+
+    const results = [];
+      for (const email of emails) {
+      const viewerToken = uuidv4();
+      await db`
+        INSERT INTO audio_viewers (audio_id, email, viewer_token, verified)
+        VALUES (${id}, ${email}, ${viewerToken}, false)
+      `;
+
+      let shareToken = audio.share_token;
+      if (!shareToken) {
+        shareToken = uuidv4();
+        await db`UPDATE audios SET share_token = ${shareToken}, visibility = 'private', is_public = false WHERE id = ${id}`;
+      } else {
+        await db`UPDATE audios SET visibility = 'private', is_public = false WHERE id = ${id}`;
+      }
+
+      const link = `${origin}/share/${shareToken}?viewerToken=${viewerToken}`;
+
+      const result = await sendInvitationEmail(email, link, audio.name);
+      results.push({ email, ok: result.success, reason: result.success ? null : (result.reason || result.error) });
+    }
+
+    return res.status(200).json({ success: true, results });
+  } catch (err) {
+    console.error('Error en inviteViewers:', err.stack || err);
+    return res.status(500).json({ error: 'Error invitando viewers' });
+  }
+};
+
+export const verifyViewer = async (req, res) => {
+  try {
+    const { viewerToken } = req.params;
+    const vrows = await db`SELECT * FROM audio_viewers WHERE viewer_token = ${viewerToken} LIMIT 1`;
+    if (!vrows || vrows.length === 0) return res.status(404).json({ error: 'Token inválido' });
+    const viewer = vrows[0];
+    if (!viewer.verified) {
+      await db`UPDATE audio_viewers SET verified = true WHERE id = ${viewer.id}`;
+    }
+    const audioRows = await db`SELECT * FROM audios WHERE id = ${viewer.audio_id} LIMIT 1`;
+    return res.status(200).json({ success: true, data: { audio: audioRows[0], viewer: { email: viewer.email, verified: true } } });
+  } catch (err) {
+    console.error('Error en verifyViewer:', err.stack || err);
+    return res.status(500).json({ error: 'Error verificando viewer' });
+  }
+};
+
+export const streamAudio = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const rows = await db`SELECT * FROM audios WHERE id = ${id} LIMIT 1`;
+    if (!rows || rows.length === 0) return res.status(404).json({ error: 'Audio no encontrado' });
+    const audio = rows[0];
+
+    if (!audio.audio) return res.status(404).json({ error: 'Archivo de audio no disponible' });
+
+    // If audio.audio is a full URL, proxy it through the server to avoid CORS issues.
+    if (audio.audio.startsWith('http://') || audio.audio.startsWith('https://')) {
+      // Use node http/https to stream
+      const url = new URL(audio.audio);
+      const protocol = url.protocol === 'https:' ? await import('https') : await import('http');
+      const client = protocol;
+      return client.get(audio.audio, (remoteRes) => {
+        if (remoteRes.statusCode && remoteRes.statusCode >= 400) {
+          res.status(remoteRes.statusCode).end();
+          return;
+        }
+        const contentType = remoteRes.headers['content-type'] || 'audio/mpeg';
+        if (!res.headersSent) res.setHeader('Content-Type', contentType);
+        remoteRes.pipe(res);
+      }).on('error', (err) => {
+        console.error('Error proxying audio URL:', err);
+        return res.status(500).json({ error: 'Error al transmitir audio' });
+      });
+    }
+
+    // Otherwise try to stream from S3 using GetObjectCommand
+    const bucket = process.env.AWS_S3_BUCKET || process.env.AWS_S3_BUCKET_NAME;
+    if (!bucket) return res.status(404).json({ error: 'No S3 bucket configured' });
+
+    let key = audio.audio;
+    // If stored as full URL, extract key after .com/
+    if (key.includes('.amazonaws.com/')) {
+      const parts = key.split('.com/');
+      if (parts.length > 1) key = parts[1];
+    }
+
+    const command = new GetObjectCommand({ Bucket: bucket, Key: key });
+    const s3resp = await s3.send(command);
+    const contentType = s3resp.ContentType || 'audio/mpeg';
+    if (!res.headersSent) res.setHeader('Content-Type', contentType);
+    const body = s3resp.Body;
+    // Pipe the S3 stream to response
+    if (body && typeof body.pipe === 'function') {
+      body.pipe(res);
+    } else if (body && body instanceof ArrayBuffer) {
+      res.send(Buffer.from(body));
+    } else {
+      res.status(500).json({ error: 'No se pudo transmitir audio' });
+    }
+  } catch (err) {
+    console.error('Error en streamAudio:', err.stack || err);
+    return res.status(500).json({ error: 'Error transmitiendo audio' });
+  }
+};
 
 export const filterAudios = async (req, res) => {
   try {

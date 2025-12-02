@@ -3,8 +3,22 @@ import './Historial.css';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import config from '../config';
+import ShareModal from '../components/ShareModal';
 
 const BASE_URL = config.API_URL;
+
+const safeJsonParse = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch (e) {
+      console.error('Error parsing JSON:', e);
+      return [];
+    }
+  }
+  return [];
+};
 
 const SeleccionHistorial = ({ show, onClose, transcripcion, onDelete, onUpdateAudio }) => {
 
@@ -13,6 +27,7 @@ const SeleccionHistorial = ({ show, onClose, transcripcion, onDelete, onUpdateAu
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [resumen, setResumen] = useState('');
   const [ideas, setIdeas] = useState([]);
   const [extractos, setExtractos] = useState([]);
@@ -27,13 +42,12 @@ const SeleccionHistorial = ({ show, onClose, transcripcion, onDelete, onUpdateAu
   };
 
   useEffect(() => {
-    console.log(transcripcion.audio)
     if (transcripcion?.transcription) {
       setTexto(transcripcion.transcription);
       // Limpiar resultados de IA al cambiar transcripción
       setResumen(transcripcion.resumen || '');
-      setIdeas(transcripcion.ideas_principales || []);
-      setExtractos(transcripcion.extractos || []);
+      setIdeas(safeJsonParse(transcripcion.ideas_principales));
+      setExtractos(safeJsonParse(transcripcion.extractos));
       setAiError('');
     }
   }, [transcripcion]); // se ejecuta cada vez que cambia transcripcion
@@ -156,6 +170,22 @@ const SeleccionHistorial = ({ show, onClose, transcripcion, onDelete, onUpdateAu
               >
                 {texto}
               </p>
+              <div style={{ marginTop: 8, display: 'flex', gap: 8, justifyContent: 'center' }}>
+                <button 
+                  onClick={() => setShowShareModal(true)} 
+                  style={{ 
+                    padding: '8px 16px', 
+                    backgroundColor: '#007bff', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '4px', 
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  Compartir / Visibilidad
+                </button>
+              </div>
             </>
           )}
           {error && <p style={{ color: 'red' }}>{error}</p>}
@@ -272,6 +302,16 @@ const SeleccionHistorial = ({ show, onClose, transcripcion, onDelete, onUpdateAu
         </div>
 
       </div>
+
+      {showShareModal && (
+        <ShareModal
+          visible={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          audioId={transcripcion.id}
+          initialToken={transcripcion.share_token}
+          initialPublic={transcripcion.is_public}
+        />
+      )}
     </div>
   );
 };
