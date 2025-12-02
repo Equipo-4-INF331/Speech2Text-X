@@ -36,7 +36,7 @@ const [loading, setLoading] = useState(false);
 
       const token = localStorage.getItem('token');
       if (!token) {
-        setUploadError('No hay sesión activa. Vuelve a iniciar sesión.');
+        setError('No hay sesión activa. Vuelve a iniciar sesión.');
         return;
       }
 

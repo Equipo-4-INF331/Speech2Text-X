@@ -2,6 +2,22 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import axios from 'axios';
 import MainPage from '../pages/MainPage';
+import { useAudios } from '../context/AudiosContext';
+
+jest.mock('../context/AudiosContext', () => ({
+  __esModule: true,
+  useAudios: jest.fn(),
+}));
+
+jest.mock('../context/AuthContext', () => ({
+  __esModule: true,
+  useAuth: () => ({
+    user: { id: 1, username: 'pepe' },
+    token: 'fake-token',
+    login: jest.fn(),
+    logout: jest.fn(),
+  }),
+}));
 
 // Mock de axios y config
 jest.mock('axios');
@@ -12,9 +28,25 @@ jest.mock('../config', () => ({
 }));
 
 describe('MainPage - Agregar nuevo audio', () => {
+  const mockFetchHistorial = jest.fn(async () => {
+    await axios.get('/audios/historial');
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
+    localStorage.clear();
+    localStorage.setItem('token', 'fake-token');  // 👈 para que pase el if (!token)
+    
     axios.get.mockResolvedValue({ data: { data: [] } });
+    useAudios.mockReturnValue({
+      fetchHistorial: mockFetchHistorial,
+      audios: [],
+      transcripciones: [],
+      setAudios: jest.fn(),
+      setTranscripciones: jest.fn(),
+      loading: false,
+      error: null,
+    });
   });
 
   test('debe renderizar el componente principal', async () => {

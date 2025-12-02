@@ -1,7 +1,13 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import axios from 'axios';
 import Historial from '../pages/Historial';
+import { useAudios } from '../context/AudiosContext';
+import axios from 'axios';
+
+jest.mock('../context/AudiosContext', () => ({
+  __esModule: true,
+  useAudios: jest.fn(),
+}));
 
 // Mock de axios y config
 jest.mock('axios');
@@ -29,8 +35,17 @@ const mockTranscripciones = [
 ];
 
 describe('Historial - Listar audios', () => {
+  const mockFetchHistorial = jest.fn();
+
   beforeEach(() => {
     jest.clearAllMocks();
+    useAudios.mockReturnValue({
+      transcripciones: [],
+      loading: false,
+      error: null,
+      fetchHistorial: mockFetchHistorial,
+      setTranscripciones: jest.fn(),
+    });
   });
 
   test('debe renderizar el componente sin errores', async () => {
@@ -42,14 +57,17 @@ describe('Historial - Listar audios', () => {
     
     // Esperar a que termine la carga
     await waitFor(() => {
-      expect(axios.get).toHaveBeenCalled();
+      expect(mockFetchHistorial).toHaveBeenCalled();
     });
   });
 
   test('debe cargar y mostrar lista de audios', async () => {
-    axios.get.mockResolvedValueOnce({ 
-      data: { data: mockTranscripciones },
-      status: 200 
+    useAudios.mockReturnValueOnce({
+      transcripciones: mockTranscripciones,
+      loading: false,
+      error: null,
+      fetchHistorial: mockFetchHistorial,
+      setTranscripciones: jest.fn(),
     });
     
     render(<Historial />);
@@ -61,7 +79,13 @@ describe('Historial - Listar audios', () => {
   });
 
   test('debe mostrar mensaje de error si falla la carga', async () => {
-    axios.get.mockRejectedValueOnce(new Error('Network error'));
+    useAudios.mockReturnValueOnce({
+      transcripciones: [],
+      loading: false,
+      error: 'Error al obtener el historial',
+      fetchHistorial: mockFetchHistorial,
+      setTranscripciones: jest.fn(),
+    });
     
     render(<Historial />);
     
@@ -71,10 +95,6 @@ describe('Historial - Listar audios', () => {
   });
 
   test('debe mostrar mensaje cuando no hay transcripciones', async () => {
-    axios.get.mockResolvedValueOnce({ 
-      data: { data: [] },
-      status: 200 
-    });
     
     render(<Historial />);
     
@@ -85,99 +105,71 @@ describe('Historial - Listar audios', () => {
 });
 
 describe('Historial - Filtrar por características', () => {
+  const mockFetchHistorial = jest.fn();
+
   beforeEach(() => {
     jest.clearAllMocks();
+    useAudios.mockReturnValue({
+      transcripciones: [],
+      loading: false,
+      error: null,
+      fetchHistorial: mockFetchHistorial,
+    });
   });
 
   test('debe renderizar los inputs de filtro', async () => {
-    axios.get.mockResolvedValueOnce({ data: { data: [] } });
-    
     render(<Historial />);
-    
     expect(screen.getByPlaceholderText(/Filtrar por nombre/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Filtrar por descripción/i)).toBeInTheDocument();
-    
-    // Esperar a que termine la carga inicial
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalled();
-    });
   });
 
   test('debe permitir filtrar por nombre', async () => {
-    axios.get.mockResolvedValueOnce({ data: { data: [] } });
-    
     render(<Historial />);
-    
-    // Esperar a que termine la carga inicial
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalled();
-    });
-    
     const nameInput = screen.getByPlaceholderText(/Filtrar por nombre/i);
     fireEvent.change(nameInput, { target: { value: 'Test' } });
-    
     expect(nameInput.value).toBe('Test');
   });
 
   test('debe aplicar filtros al hacer clic en Filtrar', async () => {
-    axios.get
-      .mockResolvedValueOnce({ data: { data: mockTranscripciones } })
-      .mockResolvedValueOnce({ data: { data: [mockTranscripciones[0]] } });
-    
     render(<Historial />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('Audio Test 1')).toBeInTheDocument();
+
+    const nameInput =
+      screen.getByPlaceholderText(/Filtrar por nombre/i);
+    fireEvent.change(nameInput, {
+      target: { value: 'Audio Test 1' },
     });
-    
-    const nameInput = screen.getByPlaceholderText(/Filtrar por nombre/i);
-    fireEvent.change(nameInput, { target: { value: 'Audio Test 1' } });
-    
+
+    const descriptionInput =
+      screen.getByPlaceholderText(/Filtrar por descripción/i);
+    fireEvent.change(descriptionInput, {
+      target: { value: 'prueba' },
+    });
+
     const filterButton = screen.getByText(/Filtrar/i);
     fireEvent.click(filterButton);
-    
-    // Esperar a que se haga la llamada con los filtros
+
     await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledWith(
-        expect.stringContaining('name=Audio+Test+1')
-      );
-    });
-    
-    // Esperar a que termine la actualización del estado
-    await waitFor(() => {
-      expect(screen.getByText('Audio Test 1')).toBeInTheDocument();
+      expect(mockFetchHistorial).toHaveBeenCalledTimes(2);
+      expect(mockFetchHistorial).toHaveBeenLastCalledWith({
+        name: 'Audio Test 1',
+        description: 'prueba',
+      });
     });
   });
 
-  test('debe limpiar filtros al hacer clic en Limpiar', async () => {
-    axios.get
-      .mockResolvedValueOnce({ data: { data: mockTranscripciones } })
-      .mockResolvedValueOnce({ data: { data: mockTranscripciones } });
-    
+  test('debe limpiar filtros al hacer clic en Limpiar', () => {
     render(<Historial />);
-    
-    // Esperar a que carguen los datos iniciales
-    await waitFor(() => {
-      expect(screen.getByText('Audio Test 1')).toBeInTheDocument();
-    });
-    
+
     const nameInput = screen.getByPlaceholderText(/Filtrar por nombre/i);
     fireEvent.change(nameInput, { target: { value: 'Test' } });
-    
+
     const clearButton = screen.getByText(/Limpiar/i);
     fireEvent.click(clearButton);
-    
+
     expect(nameInput.value).toBe('');
-    
-    // Esperar a que termine la recarga de datos después de limpiar
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledTimes(2);
-    });
   });
 
   test('debe validar que fecha desde no sea mayor a fecha hasta', async () => {
-    axios.get.mockResolvedValue({ data: { data: [] } });
-    
     render(<Historial />);
     
     // Esperar a que termine la carga inicial - cuando aparezca "No hay transcripciones"
