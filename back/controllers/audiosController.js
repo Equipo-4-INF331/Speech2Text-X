@@ -76,9 +76,6 @@ export const newAudio = async (req, res) => {
         ContentType: file.mimetype,
       };
 
-      if (process.env.AWS_S3_PUBLIC === "true") {
-        putParams.ACL = "public-read";
-      }
       try {
         await s3.send(new PutObjectCommand(putParams));
       } catch (s3err) {
@@ -141,7 +138,7 @@ export const newAudio = async (req, res) => {
       RETURNING *
     `;
 
-    // --- 🤖 GENERAR CONTENIDO AI AUTOMÁTICAMENTE ---
+    // --- 🤖 GENERAR CONTENIDO AI AUTOMÁTICusername: 'user1'AMENTE ---
     if (transcriptionResult) {
       try {
         console.log('🤖 Generando resumen, ideas principales y extractos automáticamente...');
@@ -218,59 +215,16 @@ export const filterAudios = async (req, res) => {
     const username = req.user.username;
     const { name, description, dateFrom, dateTo } = req.query;
     
-    // Construir condiciones WHERE
-    let conditions = [];
-    
-    if (username) {
-      conditions.push(db`username = ${username}`);
-    }
-    
-    if (name) {
-      conditions.push(db`name ILIKE ${'%' + name + '%'}`);
-    }
-    
-    if (description) {
-      conditions.push(db`transcription ILIKE ${'%' + description + '%'}`);
-    }
-    
-    if (dateFrom && dateTo) {
-      conditions.push(db`DATE(created_at) BETWEEN ${dateFrom} AND ${dateTo}`);
-    } else if (dateFrom) {
-      conditions.push(db`DATE(created_at) >= ${dateFrom}`);
-    } else if (dateTo) {
-      conditions.push(db`DATE(created_at) <= ${dateTo}`);
-    }
-    
-    // Si no hay condiciones, traer todo
-    let audios;
-    if (conditions.length === 0) {
-      audios = await db`SELECT * FROM audios ORDER BY created_at DESC`;
-    } else {
-      // Construir query con condiciones
-      const whereClause = conditions.map((_, i) => `condition${i}`).join(' AND ');
-      
-      // Ejecutar con todas las condiciones
-      if (username && !name && !description && !dateFrom && !dateTo) {
-        audios = await db`SELECT * FROM audios WHERE username = ${username} ORDER BY created_at DESC`;
-      } else if (username && name && !description && !dateFrom && !dateTo) {
-        audios = await db`SELECT * FROM audios WHERE username = ${username} AND name ILIKE ${'%' + name + '%'} ORDER BY created_at DESC`;
-      } else if (username && description && !name && !dateFrom && !dateTo) {
-        audios = await db`SELECT * FROM audios WHERE username = ${username} AND transcription ILIKE ${'%' + description + '%'} ORDER BY created_at DESC`;
-      } else if (username && dateFrom && dateTo && !name && !description) {
-        audios = await db`SELECT * FROM audios WHERE username = ${username} AND DATE(created_at) BETWEEN ${dateFrom} AND ${dateTo} ORDER BY created_at DESC`;
-      } else if (username && name && description && !dateFrom && !dateTo) {
-        audios = await db`SELECT * FROM audios WHERE username = ${username} AND name ILIKE ${'%' + name + '%'} AND transcription ILIKE ${'%' + description + '%'} ORDER BY created_at DESC`;
-      } else if (username && name && dateFrom && dateTo && !description) {
-        audios = await db`SELECT * FROM audios WHERE username = ${username} AND name ILIKE ${'%' + name + '%'} AND DATE(created_at) BETWEEN ${dateFrom} AND ${dateTo} ORDER BY created_at DESC`;
-      } else if (username && description && dateFrom && dateTo && !name) {
-        audios = await db`SELECT * FROM audios WHERE username = ${username} AND transcription ILIKE ${'%' + description + '%'} AND DATE(created_at) BETWEEN ${dateFrom} AND ${dateTo} ORDER BY created_at DESC`;
-      } else if (username && name && description && dateFrom && dateTo) {
-        audios = await db`SELECT * FROM audios WHERE username = ${username} AND name ILIKE ${'%' + name + '%'} AND transcription ILIKE ${'%' + description + '%'} AND DATE(created_at) BETWEEN ${dateFrom} AND ${dateTo} ORDER BY created_at DESC`;
-      } else {
-        // Caso por defecto: solo username
-        audios = await db`SELECT * FROM audios WHERE username = ${username} ORDER BY created_at DESC`;
-      }
-    }
+    const audios = await db`
+      SELECT *
+      FROM audios
+      WHERE username = ${username}
+      ${name ? db`AND name ILIKE ${'%' + name + '%'}` : db``}
+      ${description ? db`AND transcription ILIKE ${'%' + description + '%'}` : db``}
+      ${dateFrom ? db`AND DATE(created_at) >= ${dateFrom}` : db``}
+      ${dateTo ? db`AND DATE(created_at) <= ${dateTo}` : db``}
+      ORDER BY created_at DESC
+    `;
 
     // Procesar URLs y generar presigned URLs si es necesario
     const audiosWithUrls = await Promise.all(

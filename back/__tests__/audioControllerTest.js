@@ -3,6 +3,7 @@ process.env.AWS_ACCESS_KEY_ID = 'fake';
 process.env.AWS_SECRET_ACCESS_KEY = 'fake';
 process.env.AWS_REGION = 'us-east-1';
 process.env.AWS_S3_PUBLIC = 'fake';
+process.env.OPENAI_API_KEY = 'fake';
 
 jest.mock('openai', () => {
   const MockedOpenAI = class {
@@ -42,20 +43,7 @@ jest.mock('@aws-sdk/s3-request-presigner', () => ({
 
 // Un SOLO mock de la DB (tagged template compatible)
 jest.mock('../database.js', () => ({
-  db: jest.fn(async (...args) => {
-    const query = args[0]?.join ? args[0].join(' ') : args[0];
-    if (query && query.includes('FROM audios')) {
-      return [{
-        id: 1,
-        username: 'pepe',
-        name: 'El que se fue a milipilla',
-        audio: 'link',
-        transcription: 'El que se fue a milipilla perdio su silla',
-        created_at: new Date('2025-10-17T20:00:00Z'),
-      }];
-    }
-    return [];
-  }),
+  db: jest.fn(),
 }));
 
 // --- Ahora sí: importa lo que testeas (después de los mocks) ---
@@ -79,7 +67,7 @@ describe('Audio Controller', () => {
 
   it('debería devolver transcripciones exitosamente', async () => {
     db.mockResolvedValueOnce([{ id: 1, username: 'user1', name:'pepe',audio:'link',transcription:'Transcripcion correcta',created_at: new Date('2025-10-16T20:00:00Z') }]);
-    const req = { body: { username: 'user1' } };
+    const req = { user: { username: 'user1' } };
     await historial(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({ success: true, data: [{ id: 1, username: 'user1', name:'pepe',audio:'link',transcription:'Transcripcion correcta',created_at: new Date('2025-10-16T20:00:00Z') }] });
@@ -97,7 +85,7 @@ describe('Audio Controller', () => {
 
   it('debería manejar error en historial', async () => {
     db.mockRejectedValueOnce(new Error('DB error'));
-    const req = { body: { username: 'user1' } };
+    const req = { user: { username: 'user1' } };
     await historial(req, res);
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.stringContaining('Error al obtener el historial') }));
@@ -126,7 +114,7 @@ describe('Audio Controller', () => {
 
   // ---------- newAudio ----------
   it('debería devolver 400 si no hay archivo ni nombre', async () => {
-    const req = { file: null, body: {} };
+    const req = { file: null, body: {}, user: {username: 'user1'} };
     await newAudio(req, res);
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({ error: "Falta archivo y nombre" });
@@ -135,28 +123,28 @@ describe('Audio Controller', () => {
 
   it('debería crear audio con archivo y OpenAI', async () => {
     const file = { originalname: 'audio.mp3', buffer: Buffer.from('data'), mimetype: 'audio/mpeg' };
-    const req = { file, body: {  name: "audio.mp3", username: 'oeasfas'} };
+    const req = { file, body: {  name: "audio.mp3" }, user: {username: 'oeasfas'} };
     db.mockResolvedValueOnce([{ id: 10, name: 'audio.mp3' }]);
     await newAudio(req, res);
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({ success: true, data: { id: 10, name: 'audio.mp3' } });
   });
 
-  /*
+  
   it('debería devolver 500 al intentar conectarse a la bd sin body', async () => {
     const file = { originalname: 'audio.mp3', buffer: Buffer.from('data'), mimetype: 'audio/mpeg' };
-    const req = { file, body: {} };
+    const req = { file, body: {}, user: {username: 'oeasfas'} };
     db.mockRejectedValueOnce(new Error('DB error'));
     await newAudio(req, res);
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({ error: "Error al crear el audio" });
   });
-*/
+
 
 
   it('debería manejar error al subir a S3', async () => {
   const file = { originalname: 'audio.mp3', buffer: Buffer.from('data'), mimetype: 'audio/mpeg' };
-  const req = { file, body: { name: 'audio.mp3', username: 'user1' } };
+  const req = { file, body: { name: 'audio.mp3' }, user: {username: 'user1'} };
 
   const res = {
     status: jest.fn().mockReturnThis(),
@@ -177,7 +165,7 @@ describe('Audio Controller', () => {
   // ---------- deleteAudio ----------
   it('debería eliminar audio', async () => {
     db.mockResolvedValueOnce([{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z') }]);
-    const req = { params: { id: 1 } };
+    const req = { params: { id: 1 }};
     await deleteAudio(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
     
@@ -186,7 +174,7 @@ describe('Audio Controller', () => {
 
   it('debería manejar error en deleteAudio', async () => {
     db.mockRejectedValueOnce(new Error('DB error'));
-    const req = { params: { id: 1 } };
+    const req = { params: { id: 1 }};
     await deleteAudio(req, res);
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({ error: "Error al eliminar el audio" });
@@ -197,7 +185,7 @@ describe('Audio Controller', () => {
   // ---------- updateTranscription ----------
   it('debería actualizar transcripción', async () => {
     db.mockResolvedValueOnce([{ id: 1, username: 'user1', name:'pepe',audio:'link',transcription:'texto',created_at: new Date('2025-10-16T20:00:00Z') }, { id: 1, username: '1asdfga', name:'pasdepe',audio:'link',transcription:'texasdfasto',created_at: new Date('2025-10-16T20:00:00Z') }]);
-    const req = { body: { id: 1, transcription:"texto" } };
+    const req = { body: { id: 1, transcription:"texto" }};
     await updateTranscription(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({ success: true, data:  { id: 1, username: 'user1', name:'pepe',audio:'link',transcription:'texto',created_at: new Date('2025-10-16T20:00:00Z') } });
@@ -205,7 +193,7 @@ describe('Audio Controller', () => {
 
   it('debería devolver 404 si audio no encontrado', async () => {
     db.mockResolvedValueOnce([]);
-    const req = { body: { id: 1, transcription: { id: 11235123512, username: 'user1', name:'pepe',audio:'link',transcription:'Transcripcion correcta',created_at: new Date('2025-10-16T20:00:00Z')}} };
+    const req = { body: { id: 1, transcription: { id: 11235123512, username: 'user1', name:'pepe',audio:'link',transcription:'Transcripcion correcta',created_at: new Date('2025-10-16T20:00:00Z')}}};
     await updateTranscription(req, res);
     expect(res.status).toHaveBeenCalledWith(404);
     expect(res.json).toHaveBeenCalledWith({ error: 'Audio no encontrado' });
@@ -213,7 +201,7 @@ describe('Audio Controller', () => {
 
   it('debería manejar error en updateTranscription', async () => {
     db.mockRejectedValueOnce(new Error('DB error'));
-    const req = { body: { id: 1 } };
+    const req = { body: { id: 1 }};
     await updateTranscription(req, res);
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({ error: 'Error al actualizar la transcripción'});
@@ -221,8 +209,8 @@ describe('Audio Controller', () => {
 
   // ---------- filterAudios ----------
   it('debería filtrar audios por username', async () => {
-    db.mockResolvedValueOnce([{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'),  }]);
-    const req = { query:{ name: "El que se fue a milipilla",description:"El que se fue a milipilla perdio su silla" ,dateFrom: new Date('2025-10-16T20:00:00Z'),dateTo: new Date('2025-10-17T20:00:00Z'), username:'pepe'} };
+    db.mockResolvedValue([{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'),  }]);
+    const req = { query:{ name: "El que se fue a milipilla",description:"El que se fue a milipilla perdio su silla" ,dateFrom: new Date('2025-10-16T20:00:00Z'),dateTo: new Date('2025-10-17T20:00:00Z')}, user: {username: 'pepe'} };
     await filterAudios(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-cache');
@@ -230,12 +218,14 @@ describe('Audio Controller', () => {
   });
 
     it('debería filtrar audios por todos los filtros', async () => {
-    db.mockResolvedValueOnce([{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z') }, { id: 1, username: 'pepe', name:'El que se fue a masdilipilla',audio:'linasdfak',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z') }]);
-    const req = { query:{ name: "El que se fue a milipilla",description:"El que se fue a milipilla perdio su silla" ,dateFrom: new Date('2025-10-16T20:00:00Z'),dateTo: new Date('2025-10-17T20:00:00Z'), username:'pepe'} };
+    db.mockResolvedValue([{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T10:00:00Z') }, { id: 2, username: 'pepe', name:'El que se fue a milipilla',audio:'linasdfak',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z') }]);
+    const req = { query:{ name: "El que se fue a milipilla",description:"El que se fue a milipilla perdio su silla" ,dateFrom: new Date('2025-10-16T20:00:00Z'),dateTo: new Date('2025-10-17T20:00:00Z')}, user: {username: 'pepe'} };
     await filterAudios(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-cache');
-    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.example/file.mp3', }]});
+    expect(res.json).toHaveBeenCalledWith({ success: true, data:[{ id: 1, username: 'pepe', name:'El que se fue a milipilla',audio:'link',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T10:00:00Z'), url: 'https://signed-url.example/file.mp3'}, 
+      {id: 2, username: 'pepe', name:'El que se fue a milipilla',audio:'linasdfak',transcription:'El que se fue a milipilla perdio su silla',created_at: new Date('2025-10-17T20:00:00Z'), url: 'https://signed-url.example/file.mp3'
+    }]});
   });
   
 
@@ -245,7 +235,7 @@ describe('Audio Controller', () => {
    
   it('debería manejar error en filterAudios', async () => {
     db.mockRejectedValueOnce(new Error('DB error'));
-    const req = { query: {} };
+    const req = { query: {}};
     await filterAudios(req, res);
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({ error: "Error al filtrar audios" });
