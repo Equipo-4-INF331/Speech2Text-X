@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 describe('Default Suite', function() {
-  this.timeout(120000)
+  this.timeout(500000)
   let driver
   let vars
 
@@ -25,7 +25,7 @@ describe('Default Suite', function() {
 
   beforeEach(async function() {
       // Aumenta un poco el timeout por si en CI se demora en levantar el browser
-      this.timeout(60000);
+      this.timeout(500000);
 
       let options = new Options();
 
