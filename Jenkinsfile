@@ -85,7 +85,7 @@ pipeline {
                     dir('front') {
                         sh 'nohup npm run dev > ../frontend-e2e.log 2>&1 &'
                     }
-                    sh 'npx wait-on http://localhost:5173 http://localhost:3000 --timeout 60000'
+                    sh 'npx wait-on http://localhost:5173 http://localhost:5000 --timeout 60000'
 
                     dir('front') {
                         sh 'npm run test:e2e'
