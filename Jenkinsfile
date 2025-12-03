@@ -70,6 +70,36 @@ pipeline {
             }
         }
 
+        stage('E2E Testing') {
+            environment {
+                NODE_ENV = 'development'
+                CI = 'true' 
+            }
+            steps {
+                script {
+                    dir('back') {
+
+                        sh 'nohup npm run dev > ../backend-e2e.log 2>&1 &'
+                    }
+
+                    dir('front') {
+                        sh 'nohup npm run dev > ../frontend-e2e.log 2>&1 &'
+                    }
+                    sh 'npx wait-on http://localhost:5173 http://localhost:3000 --timeout 60000'
+
+                    dir('front') {
+                        sh 'npm run test:e2e'
+                    }
+                }
+            }
+            post {
+                always {
+                    sh 'pkill -f "node" || true'
+                    archiveArtifacts artifacts: '*.log', allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('Frontend build') {
             steps {
                 dir('front') {
