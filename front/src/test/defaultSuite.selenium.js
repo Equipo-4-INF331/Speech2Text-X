@@ -24,26 +24,29 @@ describe('Default Suite', function() {
   }
 
   beforeEach(async function() {
-    // Aumenta un poco el timeout por si en CI se demora en levantar el browser
-    this.timeout(60000);
+      // Aumenta un poco el timeout por si en CI se demora en levantar el browser
+      this.timeout(60000);
 
-    let options = new Options();
+      let options = new Options();
 
-    if (process.env.CI) {
-      console.log("Modo CI detectado: Ejecutando Headless (Firefox)");
+      if (process.env.CI) {
+        console.log("Modo CI detectado: Ejecutando Headless (Firefox)");
 
-      options = options
-        .headless()                           // Modo headless oficial
-        .windowSize({ width: 1920, height: 1080 });  // Tamaño para headless
-    }
+        // --- CORRECCIÓN ---
+        // En lugar de usar funciones que pueden no existir (.headless()),
+        // agregamos los argumentos de línea de comando directamente.
+        options.addArguments('--headless');
+        options.addArguments('--width=1920');
+        options.addArguments('--height=1080');
+      }
 
-    driver = await new Builder()
-      .forBrowser('firefox')
-      .setFirefoxOptions(options)
-      .build();
+      driver = await new Builder()
+        .forBrowser('firefox')
+        .setFirefoxOptions(options)
+        .build();
 
-    vars = {};
-  });
+      vars = {};
+    });
 
   // ... Tests de Login se mantienen igual ...
   it('InicioSesionInvalido', async function() {
