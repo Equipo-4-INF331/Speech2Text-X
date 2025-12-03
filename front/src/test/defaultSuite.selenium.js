@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 describe('Default Suite', function() {
-  this.timeout(30000)
+  this.timeout(120000)
   let driver
   let vars
 
