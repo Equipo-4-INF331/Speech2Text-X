@@ -24,27 +24,26 @@ describe('Default Suite', function() {
   }
 
   beforeEach(async function() {
-    // --- CONFIGURACIÓN PARA PIPELINE (CI/CD) ---
+    // Aumenta un poco el timeout por si en CI se demora en levantar el browser
+    this.timeout(60000);
+
     let options = new Options();
+
     if (process.env.CI) {
-        console.log("Modo CI detectado: Ejecutando Headless");
-        options.addArguments('--headless');
-        options.addArguments('--width=1920');
-        options.addArguments('--height=1080');
+      console.log("Modo CI detectado: Ejecutando Headless (Firefox)");
+
+      options = options
+        .headless()                           // Modo headless oficial
+        .windowSize({ width: 1920, height: 1080 });  // Tamaño para headless
     }
 
     driver = await new Builder()
       .forBrowser('firefox')
       .setFirefoxOptions(options)
-      .build()
-    vars = {}
-  })
+      .build();
 
-  afterEach(async function() {
-    if (driver) {
-      await driver.quit();
-    }
-  })
+    vars = {};
+  });
 
   // ... Tests de Login se mantienen igual ...
   it('InicioSesionInvalido', async function() {
