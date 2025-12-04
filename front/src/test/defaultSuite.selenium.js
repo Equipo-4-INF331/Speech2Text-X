@@ -36,8 +36,6 @@ describe('Default Suite', function() {
         // En lugar de usar funciones que pueden no existir (.headless()),
         // agregamos los argumentos de línea de comando directamente.
         options.addArguments('--headless');
-        options.addArguments('--no-sandbox'); // Vital para usuarios root/jenkins
-        options.addArguments('--disable-dev-shm-usage'); // Evita problemas de memoria compartida
         options.addArguments('--width=1920');
         options.addArguments('--height=1080');
       }
