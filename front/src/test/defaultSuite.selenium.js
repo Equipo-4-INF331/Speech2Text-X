@@ -36,6 +36,8 @@ describe('Default Suite', function() {
         // En lugar de usar funciones que pueden no existir (.headless()),
         // agregamos los argumentos de línea de comando directamente.
         options.addArguments('--headless');
+        options.addArguments('--no-sandbox'); // Vital para usuarios root/jenkins
+        options.addArguments('--disable-dev-shm-usage'); // Evita problemas de memoria compartida
         options.addArguments('--width=1920');
         options.addArguments('--height=1080');
       }
@@ -77,7 +79,7 @@ describe('Default Suite', function() {
     await loginUsuario();
     await driver.manage().window().setRect({ width: 1936, height: 1048 })
     
-    await driver.findElement(By.css(".upload-button")).click()
+    //await driver.findElement(By.css(".upload-button")).click()
 
     // 1. Ruta dinámica del archivo
     const audioPath = path.resolve(__dirname, 'assets', 'test_audio.mp3');
