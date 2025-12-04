@@ -8,7 +8,7 @@ const isLocalhost = window.location.hostname === "localhost" ||
 
 const apiHost = isDevelopment && isLocalhost
   ? "http://localhost:5000"
-  : "http://3.129.57.133";
+  : process.env.PUBLIC_ORIGIN;
 
 const config = {
   API_URL: apiHost,

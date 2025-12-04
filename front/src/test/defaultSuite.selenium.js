@@ -73,7 +73,7 @@ describe('Default Suite', function() {
     const titulo = await driver.wait(until.elementLocated(By.css(".main-title")), 10000);
     assert.strictEqual(await titulo.getText(), "Speech2Text X")
   })
-  /*
+
   // --- TEST DE SUBIDA DE ARCHIVO BLINDADO ---
   it('AgregarAudio', async function() {
     await loginUsuario();
@@ -107,7 +107,6 @@ describe('Default Suite', function() {
         `Se esperaba un mensaje de éxito. Recibido: "${toast}"`
     );
   });
-    */
   // ... Resto de tests igual ...
   it('FechaIncorrecta', async function() {
     await loginUsuario();
